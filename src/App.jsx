@@ -295,16 +295,12 @@ const CATEGORIES = {
   other: { label: "อื่นๆ", icon: "💸", color: "#8892a4" },
 };
 
-const INITIAL_TXS = [
-  { id: 1, date: "2024-05-03", desc: "ร้านข้าวมันไก่ท่าพระจันทร์", amount: -85, cat: "food", type: "var", src: "make" },
-  { id: 2, date: "2024-05-03", desc: "Grab - BTS อารีย์", amount: -120, cat: "transport", type: "var", src: "make" },
-  { id: 3, date: "2024-05-02", desc: "เงินเดือน บ.ABC จำกัด", amount: 45000, cat: "income", type: "fix", src: "make" }
-];
+const INITIAL_TXS = [];
 
 const INITIAL_PORTFOLIO = [
-  { symbol: "NVDA", shares: 5, avgCost: 720, exchange: "US" },
-  { symbol: "AAPL", shares: 10, avgCost: 170, exchange: "US" },
-  { symbol: "BTC", shares: 0.25, avgCost: 55000, exchange: "CRYPTO" }
+  { symbol: "VOO", shares: 0.0276222, avgCost: 651.65, exchange: "US" },
+  { symbol: "NVDA", shares: 0.0620563, avgCost: 200.4630, exchange: "US" },
+  { symbol: "GOOG", shares: 0.0300009, avgCost: 341.6560, exchange: "US" }
 ];
 
 const BUDGETS = [
@@ -732,7 +728,7 @@ function SmsParserTab({ setTxs, portfolio, setPortfolio }) {
       setPortfolio(prev => {
         const existing = prev.find(p => p.symbol === result.symbol);
         const sharesToAdd = result.shares || 1;
-        const USD_THB = 36.5; 
+        const USD_THB = 32.54; 
         const costUSD = result.amount / USD_THB;
 
         if (existing) {
@@ -822,7 +818,7 @@ function PortfolioTab({ portfolio, setPortfolio }) {
   const [shares, setShares] = useState("");
   const [cost, setCost] = useState("");
   const [exch, setExch] = useState("US");
-  const USD_THB = 36.5;
+  const USD_THB = 32.54;
   const prices = { ...MOCK_PRICES, ...MOCK_CRYPTO };
 
   function addHolding() {
@@ -892,7 +888,7 @@ function PortfolioTab({ portfolio, setPortfolio }) {
 
       <div className="card">
         <div className="section-header">
-          <span className="section-title">หุ้น / Crypto ที่ถือ</span>
+          <span className="section-title">หุ้น dime ที่ถือ</span>
         </div>
         <table className="data-table">
           <thead>
