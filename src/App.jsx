@@ -83,7 +83,20 @@ const styles = `
   .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
   .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
   @media(max-width:900px) { .grid-4{grid-template-columns:1fr 1fr} .grid-3{grid-template-columns:1fr 1fr} }
-  @media(max-width:600px) { .grid-2,.grid-3,.grid-4{grid-template-columns:1fr} .main{padding:12px} }
+  @media(max-width:600px) { 
+    .grid-2,.grid-3,.grid-4{grid-template-columns:1fr} 
+    .main{padding:12px} 
+    
+    /* แก้ Top Nav ไม่ให้ซ้อนกัน */
+    .topnav { flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px; }
+    
+    /* แก้ตารางให้ปัดซ้ายขวาได้ */
+    .data-table { display: block; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+    
+    /* ลดขนาดฟอนต์/ระยะห่างนิดหน่อยให้พอดีจอ */
+    .metric-val { font-size: 22px !important; }
+    .card { padding: 16px; }
+  }
 
   /* CARD */
   .card {
