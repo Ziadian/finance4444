@@ -19,155 +19,180 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// รหัสผ่านเข้าใช้งาน (แก้ได้ตามใจชอบ)
+// รหัสผ่านเข้าใช้งาน
 const AUTHORIZED_USERS = {
-  "admin": "4444",
+  "admin": "zxc12345",
   "friend": "welcome"
 };
 
 // ============================================================
-// STYLES (รวม UI ตัวเต็ม + Mobile Responsive + หน้า Login)
+// STYLES (อัปเกรด Premium Login + Glassmorphism)
 // ============================================================
 const styles = `
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
     --bg: #0a0c0f; --bg2: #111318; --bg3: #181c23; --border: #1e2430; --border2: #252d3a;
     --text: #e8eaf0; --text2: #8892a4; --text3: #4a5568;
-    --green: #00d68f; --green2: #00a86b; --red: #ff4d6a; --red2: #cc3355;
-    --blue: #3d8bff; --blue2: #1a6bdd; --gold: #f0b429; --gold2: #cc8800; --purple: #9f7aea;
-    --card-radius: 14px;
+    --green: #00d68f; --red: #ff4d6a; --blue: #3d8bff; --blue2: #1a6bdd; --gold: #f0b429;
+    --card-radius: 16px;
     --font-mono: 'IBM Plex Mono', monospace; --font-thai: 'Noto Sans Thai', sans-serif;
   }
 
-  body { background: var(--bg); color: var(--text); font-family: var(--font-thai); }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-thai); -webkit-font-smoothing: antialiased; }
   .app { min-height: 100vh; display: flex; flex-direction: column; }
 
-  /* LOGIN PAGE */
-  .login-container { height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); padding: 20px; }
-  .login-card { width: 100%; max-width: 360px; background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; padding: 32px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
-  .login-logo { width: 60px; height: 60px; background: linear-gradient(135deg, var(--green), var(--blue)); border-radius: 15px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 24px; font-weight: 800; color: #000; font-family: var(--font-mono); }
+  /* 💎 PREMIUM LOGIN PAGE 💎 */
+  .login-container { 
+    height: 100vh; display: flex; align-items: center; justify-content: center; 
+    background: radial-gradient(circle at 50% 0%, #161f2e 0%, var(--bg) 70%);
+    position: relative; overflow: hidden; padding: 20px;
+  }
+  .login-container::before {
+    content: ''; position: absolute; width: 500px; height: 500px;
+    background: var(--blue); filter: blur(150px); opacity: 0.15; border-radius: 50%;
+    top: -150px; left: -100px; animation: float 10s infinite alternate;
+  }
+  .login-container::after {
+    content: ''; position: absolute; width: 400px; height: 400px;
+    background: var(--green); filter: blur(150px); opacity: 0.1; border-radius: 50%;
+    bottom: -100px; right: -50px; animation: float 12s infinite alternate-reverse;
+  }
+  @keyframes float { 0% { transform: translateY(0px); } 100% { transform: translateY(30px); } }
+  
+  .login-card { 
+    width: 100%; max-width: 380px; 
+    background: rgba(17, 19, 24, 0.65); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 24px; 
+    padding: 40px 32px; text-align: center; box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+    position: relative; z-index: 10;
+  }
+  .login-logo { 
+    width: 64px; height: 64px; background: linear-gradient(135deg, var(--green), var(--blue)); 
+    border-radius: 18px; display: flex; align-items: center; justify-content: center; 
+    margin: 0 auto 24px; font-size: 28px; font-weight: 800; color: #000; font-family: var(--font-mono); 
+    box-shadow: 0 10px 20px rgba(61,139,255,0.2);
+  }
+  .login-title { font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 6px; letter-spacing: 0.5px; }
+  .login-sub { font-size: 13px; color: var(--text2); margin-bottom: 32px; font-family: var(--font-mono); }
+  
+  .login-inp { 
+    width: 100%; padding: 15px 16px; margin-bottom: 16px; 
+    background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); 
+    border-radius: 12px; color: #fff; font-size: 15px; font-family: var(--font-mono);
+    transition: all 0.3s;
+  }
+  .login-inp:focus { border-color: var(--blue); background: rgba(0,0,0,0.4); outline: none; box-shadow: 0 0 0 4px rgba(61,139,255,0.15); }
+  
+  .login-btn { 
+    width: 100%; padding: 15px; border-radius: 12px; border: none; 
+    background: linear-gradient(135deg, var(--blue), var(--blue2)); 
+    color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; 
+    transition: all 0.3s; box-shadow: 0 4px 15px rgba(61,139,255,0.3); font-family: var(--font-mono); letter-spacing: 1px; text-transform: uppercase;
+  }
+  .login-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(61,139,255,0.45); }
 
-  /* TOP NAV */
-  .topnav { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; background: var(--bg2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; backdrop-filter: blur(12px); }
-  .topnav-brand { display: flex; align-items: center; gap: 10px; }
-  .topnav-logo { width: 34px; height: 34px; background: linear-gradient(135deg, var(--green), var(--blue)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-weight: 700; font-size: 14px; color: #000; }
-  .topnav-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  /* MAIN UI */
+  .topnav { display: flex; align-items: center; justify-content: space-between; padding: 16px 32px; background: rgba(17, 19, 24, 0.8); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; backdrop-filter: blur(16px); }
+  .topnav-brand { display: flex; align-items: center; gap: 12px; }
+  .topnav-logo { width: 36px; height: 36px; background: linear-gradient(135deg, var(--green), var(--blue)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-weight: 700; font-size: 15px; color: #000; }
+  .topnav-title { font-size: 16px; font-weight: 600; color: var(--text); }
   .topnav-sub { font-size: 11px; color: var(--text2); font-family: var(--font-mono); }
   .topnav-sync { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text2); font-family: var(--font-mono); }
-  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-  .logout-btn { background: var(--bg3); color: var(--red); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; transition: 0.2s; font-family: var(--font-mono); }
-  .logout-btn:hover { background: var(--border); }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1; box-shadow: 0 0 10px var(--green);} 50%{opacity:.4; box-shadow: none;} }
+  .logout-btn { background: transparent; color: var(--red); border: 1px solid var(--border); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; transition: 0.2s; font-family: var(--font-mono); }
+  .logout-btn:hover { background: rgba(255,77,106,0.1); border-color: rgba(255,77,106,0.3); }
 
   /* TABS */
-  .tabs { display: flex; gap: 4px; padding: 12px 24px; background: var(--bg2); border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+  .tabs { display: flex; gap: 8px; padding: 16px 32px; background: var(--bg); border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
   .tabs::-webkit-scrollbar { display: none; }
-  .tab { padding: 7px 16px; border-radius: 8px; border: 1px solid transparent; background: none; color: var(--text2); font-size: 13px; font-family: var(--font-thai); cursor: pointer; white-space: nowrap; transition: all .15s; display: flex; align-items: center; gap: 6px; }
+  .tab { padding: 8px 18px; border-radius: 10px; border: 1px solid transparent; background: var(--bg2); color: var(--text2); font-size: 13px; font-family: var(--font-thai); cursor: pointer; white-space: nowrap; transition: all .2s; display: flex; align-items: center; gap: 8px; }
   .tab:hover { color: var(--text); background: var(--bg3); }
-  .tab.active { background: var(--bg3); border-color: var(--border2); color: var(--text); font-weight: 600; }
+  .tab.active { background: var(--blue); color: #fff; font-weight: 600; box-shadow: 0 4px 12px rgba(61,139,255,0.2); }
   .tab-icon { font-size: 15px; }
 
-  /* MAIN */
-  .main { flex: 1; padding: 20px 24px; max-width: 1280px; margin: 0 auto; width: 100%; }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  /* GRID & LAYOUT */
+  .main { flex: 1; padding: 24px 32px; max-width: 1400px; margin: 0 auto; width: 100%; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
 
   @media(max-width:900px) { .grid-4{grid-template-columns:1fr 1fr} .grid-3{grid-template-columns:1fr 1fr} }
   @media(max-width:600px) { 
     .grid-2,.grid-3,.grid-4{grid-template-columns:1fr} 
-    .main{padding:12px} 
-    .topnav { flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px; }
+    .main{padding:16px} .tabs { padding: 12px 16px; }
+    .topnav { flex-direction: column; align-items: flex-start; gap: 16px; padding: 20px; }
     .data-table { display: block; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
-    .metric-val { font-size: 22px !important; }
-    .card { padding: 16px; }
+    .metric-val { font-size: 24px !important; }
+    .card { padding: 20px; }
   }
 
-  /* CARD & METRICS */
-  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--card-radius); padding: 20px; transition: border-color .2s; }
+  /* CARDS */
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--card-radius); padding: 24px; transition: border-color .2s, transform .2s; }
   .card:hover { border-color: var(--border2); }
-  .card-title { font-size: 11px; font-weight: 600; color: var(--text3); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 12px; font-family: var(--font-mono); }
+  .card-title { font-size: 11px; font-weight: 700; color: var(--text3); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 16px; font-family: var(--font-mono); }
+  
   .metric-card { position: relative; overflow: hidden; }
-  .metric-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent, var(--blue)); }
-  .metric-val { font-size: 26px; font-weight: 700; font-family: var(--font-mono); color: var(--text); }
-  .metric-sub { font-size: 12px; color: var(--text2); margin-top: 4px; }
-  .metric-badge { display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 20px; font-size: 11px; font-family: var(--font-mono); margin-top: 6px; }
+  .metric-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent, var(--blue)); }
+  .metric-val { font-size: 28px; font-weight: 700; font-family: var(--font-mono); color: var(--text); }
+  .metric-sub { font-size: 12px; color: var(--text2); margin-top: 6px; }
+  .metric-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-family: var(--font-mono); margin-top: 8px; font-weight: 600; }
+  
   .badge-green { background: rgba(0,214,143,.12); color: var(--green); }
   .badge-red { background: rgba(255,77,106,.12); color: var(--red); }
-  .badge-gold { background: rgba(240,180,41,.12); color: var(--gold); }
   .badge-blue { background: rgba(61,139,255,.12); color: var(--blue); }
 
-  /* COMPONENTS */
-  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-  .section-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  /* TABLES & LISTS */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .section-title { font-size: 16px; font-weight: 600; color: var(--text); }
+  
   .data-table { width: 100%; border-collapse: collapse; }
-  .data-table th { font-size: 10px; color: var(--text3); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .08em; padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
-  .data-table td { padding: 11px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .data-table th { font-size: 10px; color: var(--text3); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+  .data-table td { padding: 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
   .data-table tr:hover td { background: rgba(255,255,255,.02); }
-  .tx-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  
+  .tx-item { display: flex; align-items: center; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border); }
   .tx-item:last-child { border-bottom: none; }
-  .tx-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+  .tx-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
   .tx-info { flex: 1; min-width: 0; }
-  .tx-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .tx-meta { font-size: 11px; color: var(--text2); margin-top: 2px; font-family: var(--font-mono); }
-  .tx-amount { font-family: var(--font-mono); font-size: 14px; font-weight: 600; text-align: right; flex-shrink: 0; }
-  .progress-bar { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; margin-top: 8px; }
-  .progress-fill { height: 100%; border-radius: 3px; transition: width .6s ease; }
-  .budget-item { margin-bottom: 18px; }
-  .budget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-  .budget-name { font-size: 13px; font-weight: 500; }
-  .budget-amounts { font-size: 12px; font-family: var(--font-mono); color: var(--text2); }
-  .donut-wrap { display: flex; align-items: center; gap: 20px; }
-  .donut-legend { flex: 1; }
-  .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
-  .legend-label { font-size: 12px; color: var(--text2); flex: 1; }
-  .legend-val { font-size: 12px; font-family: var(--font-mono); color: var(--text); }
-  .input-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
-  .inp { flex: 1; min-width: 140px; padding: 9px 13px; background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px; color: var(--text); font-size: 13px; font-family: var(--font-thai); outline: none; transition: border-color .15s; }
+  .tx-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tx-meta { font-size: 11px; color: var(--text2); margin-top: 4px; font-family: var(--font-mono); }
+  .tx-amount { font-family: var(--font-mono); font-size: 15px; font-weight: 600; text-align: right; flex-shrink: 0; }
+
+  /* FORMS & INPUTS */
+  .input-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .inp { flex: 1; min-width: 140px; padding: 12px 16px; background: var(--bg3); border: 1px solid var(--border2); border-radius: 10px; color: var(--text); font-size: 14px; font-family: var(--font-thai); outline: none; transition: border-color .2s; }
   .inp:focus { border-color: var(--blue); }
-  .btn { padding: 9px 18px; border-radius: 8px; border: none; font-size: 13px; font-family: var(--font-thai); cursor: pointer; font-weight: 600; transition: opacity .15s; }
-  .btn:hover { opacity: .85; }
+  
+  .btn { padding: 12px 20px; border-radius: 10px; border: none; font-size: 14px; font-family: var(--font-thai); cursor: pointer; font-weight: 600; transition: all .2s; }
+  .btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
   .btn-green { background: var(--green); color: #000; }
   .btn-blue { background: var(--blue); color: #fff; }
   .btn-ghost { background: var(--bg3); color: var(--text); border: 1px solid var(--border2); }
-  .btn-red { background: var(--red); color: #fff; }
-  .sms-box { width: 100%; min-height: 100px; padding: 12px; background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px; color: var(--text); font-size: 12px; font-family: var(--font-mono); resize: vertical; outline: none; }
-  .sms-box:focus { border-color: var(--blue); }
-  .parse-result { margin-top: 12px; padding: 14px; background: rgba(0,214,143,.06); border: 1px solid rgba(0,214,143,.2); border-radius: 10px; }
-  .parse-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
-  .parse-key { color: var(--text2); font-family: var(--font-mono); }
-  .parse-val { color: var(--text); font-weight: 600; }
-  .ticker-card { display: flex; flex-direction: column; gap: 4px; }
-  .ticker-sym { font-size: 16px; font-weight: 700; font-family: var(--font-mono); }
-  .ticker-name { font-size: 11px; color: var(--text2); }
-  .ticker-price { font-size: 22px; font-weight: 700; font-family: var(--font-mono); margin-top: 6px; }
-  .ticker-change { font-size: 12px; font-family: var(--font-mono); }
-  .up { color: var(--green); } .dn { color: var(--red); }
-  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-family: var(--font-mono); font-weight: 600; }
+
+  /* UTILS */
+  .progress-bar { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+  .progress-fill { height: 100%; border-radius: 3px; transition: width .6s ease; }
+  .tag { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-family: var(--font-mono); font-weight: 600; letter-spacing: 0.5px; }
   .tag-income { background: rgba(0,214,143,.15); color: var(--green); }
   .tag-expense { background: rgba(255,77,106,.15); color: var(--red); }
   .tag-invest { background: rgba(61,139,255,.15); color: var(--blue); }
   .tag-fix { background: rgba(159,122,234,.15); color: var(--purple); }
   .tag-var { background: rgba(240,180,41,.15); color: var(--gold); }
-  .gap-16 { display: flex; flex-direction: column; gap: 16px; }
-  .mt-16 { margin-top: 16px; } .mt-12 { margin-top: 12px; } .mt-8 { margin-top: 8px; }
-  .row { display: flex; align-items: center; gap: 10px; }
+  .gap-20 { display: flex; flex-direction: column; gap: 20px; }
   .text-right { text-align: right; }
   .text-mono { font-family: var(--font-mono); }
-  .text-xs { font-size: 11px; }
-  .text-muted { color: var(--text2); }
-  .divider { height: 1px; background: var(--border); margin: 16px 0; }
-  .alert { padding: 12px 16px; border-radius: 10px; margin-bottom: 12px; font-size: 13px; display: flex; align-items: flex-start; gap: 10px; }
-  .alert-warning { background: rgba(240,180,41,.08); border: 1px solid rgba(240,180,41,.25); color: var(--gold); }
-  .alert-info { background: rgba(61,139,255,.08); border: 1px solid rgba(61,139,255,.25); color: var(--blue); }
+  .alert { padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; font-size: 14px; display: flex; align-items: flex-start; gap: 12px; }
+  .alert-warning { background: rgba(240,180,41,.1); border: 1px solid rgba(240,180,41,.3); color: var(--gold); }
+  .alert-info { background: rgba(61,139,255,.1); border: 1px solid rgba(61,139,255,.3); color: var(--blue); }
   select.inp { appearance: none; }
-  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
 `;
 
 // ============================================================
@@ -181,10 +206,12 @@ const MOCK_PRICES = {
   GOOGL: { price: 168.42, change: 0.88, pct: 0.52, name: "Alphabet Class A" },
   AMZN: { price: 191.75, change: 3.12, pct: 1.65, name: "Amazon" },
 };
+
 const MOCK_CRYPTO = {
   BTC: { price: 64230, change: 1820, pct: 2.91, name: "Bitcoin" },
   ETH: { price: 3142, change: -45, pct: -1.41, name: "Ethereum" },
 };
+
 const CATEGORIES = {
   food: { label: "อาหาร", icon: "🍜", color: "#f0b429" },
   transport: { label: "เดินทาง", icon: "🚗", color: "#3d8bff" },
@@ -208,7 +235,7 @@ const BUDGETS = [
   { cat: "health", limit: 1500 },
 ];
 
-function fmt(n, dec = 0) { return n.toLocaleString("th-TH", { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
+function fmt(n, dec = 0) { return (n||0).toLocaleString("th-TH", { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
 
 function parseMakeSMS(sms) {
   const text = sms.trim();
@@ -244,7 +271,7 @@ function parseMakeSMS(sms) {
 // ============================================================
 // COMPONENTS
 // ============================================================
-function DonutChart({ data, size = 140 }) {
+function DonutChart({ data, size = 150 }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   if (total === 0) return <svg width={size} height={size} style={{ flexShrink: 0 }}></svg>;
   let acc = 0;
@@ -263,12 +290,13 @@ function DonutChart({ data, size = 140 }) {
 function MiniBarChart({ values, color = "#3d8bff", height = 50 }) {
   const max = Math.max(...values, 1);
   return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height }}>
-      {values.map((v, i) => <div key={i} style={{ flex: 1, height: `${(v / max) * 100}%`, background: color, borderRadius: "3px 3px 0 0", opacity: i === values.length - 1 ? 1 : 0.45, minHeight: 2 }} />)}
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height }}>
+      {values.map((v, i) => <div key={i} style={{ flex: 1, height: `${(v / max) * 100}%`, background: color, borderRadius: "4px 4px 0 0", opacity: i === values.length - 1 ? 1 : 0.45, minHeight: 3 }} />)}
     </div>
   );
 }
 
+// ---------------- DASHBOARD TAB ----------------
 function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices }) {
   const thisMonth = txs.filter(t => t.date.startsWith(new Date().toISOString().slice(0, 7)));
   const income = thisMonth.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
@@ -290,44 +318,81 @@ function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices }) {
   ].filter(d => d.value > 0);
 
   return (
-    <div className="gap-16">
-      {savingRate < 20 && income > 0 && <div className="alert alert-warning">⚠️ อัตราการออมเดือนนี้ {savingRate.toFixed(1)}% — ต่ำกว่าเป้าหมาย 20%</div>}
+    <div className="gap-20">
+      {savingRate < 20 && income > 0 && <div className="alert alert-warning">⚠️ อัตราการออมเดือนนี้ {savingRate.toFixed(1)}% — ต่ำกว่าเป้าหมายที่ 20%</div>}
       <div className="grid-4">
-        <div className="card metric-card" style={{ "--accent": "#00d68f" }}><div className="card-title">Net Worth</div><div className="metric-val" style={{fontSize: isLoadingPrices?'18px':'26px'}}>{isLoadingPrices?"...":`฿${fmt(netWorth)}`}</div><div className="metric-sub">ทรัพย์สินสุทธิ</div><div className="metric-badge badge-green">Live</div></div>
-        <div className="card metric-card" style={{ "--accent": "#3d8bff" }}><div className="card-title">รายรับเดือนนี้</div><div className="metric-val">฿{fmt(income)}</div><div className="metric-badge badge-blue">Current Month</div></div>
-        <div className="card metric-card" style={{ "--accent": expense > 30000 ? "#ff4d6a" : "#00d68f" }}><div className="card-title">รายจ่ายเดือนนี้</div><div className="metric-val">฿{fmt(expense)}</div><div className={`metric-badge ${expense > 30000 ? "badge-red" : "badge-green"}`}>{expense > 30000 ? "เกินงบ" : "ในงบ"}</div></div>
-        <div className="card metric-card" style={{ "--accent": "#9f7aea" }}><div className="card-title">มูลค่าพอร์ต (THB)</div><div className="metric-val" style={{fontSize: isLoadingPrices?'18px':'26px'}}>{isLoadingPrices?"...":`฿${fmt(portValueTHB)}`}</div><div className="metric-sub">{isLoadingPrices?"":`P&L: ${portPnL>=0?"+":""}$${fmt(portPnL, 2)}`}</div></div>
+        <div className="card metric-card" style={{ "--accent": "#00d68f" }}>
+          <div className="card-title">Net Worth</div>
+          <div className="metric-val" style={{fontSize: isLoadingPrices?'20px':'28px'}}>{isLoadingPrices?"กำลังคำนวณ...":`฿${fmt(netWorth)}`}</div>
+          <div className="metric-sub">ทรัพย์สินสุทธิทั้งหมด</div>
+          <div className="metric-badge badge-green">Live</div>
+        </div>
+        <div className="card metric-card" style={{ "--accent": "#3d8bff" }}>
+          <div className="card-title">รายรับเดือนนี้</div>
+          <div className="metric-val">฿{fmt(income)}</div>
+          <div className="metric-badge badge-blue">Current Month</div>
+        </div>
+        <div className="card metric-card" style={{ "--accent": expense > 30000 ? "#ff4d6a" : "#00d68f" }}>
+          <div className="card-title">รายจ่ายเดือนนี้</div>
+          <div className="metric-val">฿{fmt(expense)}</div>
+          <div className={`metric-badge ${expense > 30000 ? "badge-red" : "badge-green"}`}>{expense > 30000 ? "เกินงบแล้ว" : "อยู่ในงบประมาณ"}</div>
+        </div>
+        <div className="card metric-card" style={{ "--accent": "#9f7aea" }}>
+          <div className="card-title">มูลค่าพอร์ต (THB)</div>
+          <div className="metric-val" style={{fontSize: isLoadingPrices?'20px':'28px'}}>{isLoadingPrices?"กำลังคำนวณ...":`฿${fmt(portValueTHB)}`}</div>
+          <div className="metric-sub">{isLoadingPrices?"":`P&L: ${portPnL>=0?"+":""}$${fmt(portPnL, 2)}`}</div>
+        </div>
       </div>
+
       <div className="grid-2">
         <div className="card">
           <div className="card-title">การจัดสรรสินทรัพย์ {isLoadingPrices && "..."}</div>
-          <div className="donut-wrap"><DonutChart data={allocData} size={150} />
-            <div className="donut-legend">{allocData.map((d, i) => <div key={i} className="legend-item"><div className="legend-dot" style={{ background: d.color }} /><span className="legend-label">{d.label}</span><span className="legend-val">฿{fmt(d.value)}</span></div>)}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '30px', marginTop: '10px' }}>
+            <DonutChart data={allocData} size={160} />
+            <div style={{ flex: 1 }}>
+              {allocData.map((d, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                  <div style={{ width: '12px', height: '12px', borderRadius: '4px', background: d.color }} />
+                  <span style={{ fontSize: '13px', color: 'var(--text2)', flex: 1 }}>{d.label}</span>
+                  <span style={{ fontSize: '13px', fontFamily: 'var(--font-mono)', color: 'var(--text)', fontWeight: 600 }}>฿{fmt(d.value)}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
         <div className="card">
-          <div className="card-title">รายจ่าย 5 เดือน</div>
-          <MiniBarChart values={[0, 0, 0, 0, expense]} color="#ff4d6a" height={90} />
-          <div style={{ display: "flex", gap: 3, marginTop: 6 }}>{["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค."].map((m, i) => <div key={i} style={{ flex: 1, textAlign: "center", fontSize: 9, color: "var(--text3)" }}>{m}</div>)}</div>
+          <div className="card-title">ภาพรวมรายจ่าย 5 เดือน</div>
+          <div style={{ marginTop: '20px' }}>
+            <MiniBarChart values={[0, 0, 0, 0, expense]} color="#ff4d6a" height={100} />
+            <div style={{ display: "flex", gap: 4, marginTop: 10 }}>
+              {["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค."].map((m, i) => <div key={i} style={{ flex: 1, textAlign: "center", fontSize: 10, color: "var(--text3)" }}>{m}</div>)}
+            </div>
+          </div>
         </div>
       </div>
+
       <div className="card">
-        <div className="section-header"><span className="section-title">รายการล่าสุด</span></div>
+        <div className="section-header"><span className="section-title">รายการเดินบัญชีล่าสุด</span></div>
         {txs.slice(0, 5).map(tx => {
           const cat = CATEGORIES[tx.cat] || CATEGORIES.other;
           return (
             <div key={tx.id} className="tx-item">
               <div className="tx-icon" style={{ background: cat.color + "22" }}>{cat.icon}</div>
-              <div className="tx-info"><div className="tx-name">{tx.desc}</div><div className="tx-meta">{tx.date} · <span className={tx.type==="fix"?"tag tag-fix":"tag tag-var"}>{tx.type==="fix"?"Fix":"Var"}</span></div></div>
+              <div className="tx-info">
+                <div className="tx-name">{tx.desc}</div>
+                <div className="tx-meta">{tx.date} · <span className={tx.type==="fix"?"tag tag-fix":"tag tag-var"}>{tx.type==="fix"?"Fix":"Var"}</span></div>
+              </div>
               <div className="tx-amount" style={{ color: tx.amount > 0 ? "var(--green)" : "var(--text)" }}>{tx.amount > 0 ? "+" : ""}฿{fmt(Math.abs(tx.amount))}</div>
             </div>
           );
         })}
+        {txs.length === 0 && <div style={{ textAlign: "center", color: "var(--text3)", padding: "20px" }}>ยังไม่มีรายการทางการเงิน</div>}
       </div>
     </div>
   );
 }
 
+// ---------------- TRANSACTIONS TAB ----------------
 function TransactionsTab({ txs, setTxs }) {
   const [desc, setDesc] = useState(""); const [amount, setAmount] = useState("");
   const [cat, setCat] = useState("food"); const [type, setType] = useState("var");
@@ -341,30 +406,48 @@ function TransactionsTab({ txs, setTxs }) {
 
   const filtered = filter === "all" ? txs : filter === "income" ? txs.filter(t => t.amount > 0) : txs.filter(t => t.amount < 0);
   return (
-    <div className="gap-16">
-      <div className="card"><div className="card-title">เพิ่มรายการด้วยตนเอง</div>
+    <div className="gap-20">
+      <div className="card">
+        <div className="card-title">เพิ่มรายการใหม่ด้วยตนเอง</div>
         <div className="input-row">
-          <input className="inp" placeholder="คำอธิบาย" value={desc} onChange={e => setDesc(e.target.value)} style={{ flex: 2 }} />
-          <input className="inp" type="number" placeholder="จำนวนเงิน (+/-)" value={amount} onChange={e => setAmount(e.target.value)} style={{ flex: 1 }} />
+          <input className="inp" placeholder="คำอธิบายรายการ (เช่น เงินเดือน, ค่าข้าว)" value={desc} onChange={e => setDesc(e.target.value)} style={{ flex: 2 }} />
+          <input className="inp" type="number" placeholder="จำนวนเงิน (ใส่ - ถ้าเป็นรายจ่าย)" value={amount} onChange={e => setAmount(e.target.value)} style={{ flex: 1 }} />
         </div>
         <div className="input-row">
-          <select className="inp" value={cat} onChange={e => setCat(e.target.value)}>{Object.entries(CATEGORIES).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}</select>
-          <select className="inp" value={type} onChange={e => setType(e.target.value)}><option value="fix">🔒 Fix Cost (คงที่)</option><option value="var">📊 Variable Cost (ผันแปร)</option></select>
-          <button className="btn btn-green" onClick={addTx}>+ เพิ่ม</button>
+          <select className="inp" value={cat} onChange={e => setCat(e.target.value)}>
+            {Object.entries(CATEGORIES).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+          </select>
+          <select className="inp" value={type} onChange={e => setType(e.target.value)}>
+            <option value="fix">🔒 Fix Cost (รายจ่ายคงที่)</option>
+            <option value="var">📊 Variable Cost (รายจ่ายผันแปร)</option>
+          </select>
+          <button className="btn btn-green" onClick={addTx} style={{ minWidth: '120px' }}>+ เพิ่มรายการ</button>
         </div>
       </div>
       <div className="card">
-        <div className="section-header"><span className="section-title">ประวัติรายการ</span>
-          <div className="row" style={{ gap: 6 }}>{["all", "income", "expense"].map(f => <button key={f} className={`btn btn-ghost ${filter === f ? "active" : ""}`} style={{ padding: "5px 12px", fontSize: 12, background: filter === f ? "var(--border2)" : undefined }} onClick={() => setFilter(f)}>{f}</button>)}</div>
+        <div className="section-header">
+          <span className="section-title">ประวัติรายการ ({filtered.length})</span>
+          <div className="row" style={{ gap: 8 }}>
+            {["all", "income", "expense"].map(f => (
+              <button key={f} className={`btn btn-ghost ${filter === f ? "active" : ""}`} 
+                style={{ padding: "6px 14px", fontSize: 12, background: filter === f ? "var(--border2)" : undefined }} 
+                onClick={() => setFilter(f)}>
+                {f === "all" ? "ทั้งหมด" : f === "income" ? "รายรับ" : "รายจ่าย"}
+              </button>
+            ))}
+          </div>
         </div>
         <table className="data-table">
           <thead><tr><th>วันที่</th><th>รายการ</th><th>ประเภท</th><th className="text-right">จำนวน</th></tr></thead>
           <tbody>
             {filtered.map(tx => (
               <tr key={tx.id}>
-                <td className="text-mono text-xs text-muted">{tx.date}</td><td style={{ fontSize: 13 }}>{tx.desc}</td>
-                <td><span className={tx.type === "fix" ? "tag tag-fix" : "tag tag-var"}>{tx.type === "fix" ? "Fix" : "Var"}</span></td>
-                <td className="text-right text-mono" style={{ color: tx.amount > 0 ? "var(--green)" : "var(--text)", fontWeight: 600 }}>{tx.amount > 0 ? "+" : ""}฿{fmt(Math.abs(tx.amount))}</td>
+                <td className="text-mono text-xs text-muted">{tx.date}</td>
+                <td style={{ fontSize: 14 }}>{tx.desc}</td>
+                <td><span className={tx.type === "fix" ? "tag tag-fix" : "tag tag-var"}>{tx.type === "fix" ? "Fix Cost" : "Variable"}</span></td>
+                <td className="text-right text-mono" style={{ color: tx.amount > 0 ? "var(--green)" : "var(--text)", fontWeight: 600, fontSize: '15px' }}>
+                  {tx.amount > 0 ? "+" : ""}฿{fmt(Math.abs(tx.amount))}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -374,37 +457,60 @@ function TransactionsTab({ txs, setTxs }) {
   );
 }
 
+// ---------------- SMS PARSER TAB ----------------
 function SmsParserTab({ setTxs, portfolio, setPortfolio }) {
   const [sms, setSms] = useState(""); const [result, setResult] = useState(null); const [added, setAdded] = useState(false);
   function parse() { setResult(parseMakeSMS(sms)); setAdded(false); }
   function addToLedger() {
     if (!result?.valid) return;
     setTxs(prev => [{ id: Date.now(), date: result.date, desc: result.cat === "invest" && result.symbol ? `ซื้อหุ้น ${result.symbol}` : result.merchant, amount: result.type === "income" ? result.amount : -result.amount, cat: result.cat, type: "var", src: "make-sms" }, ...prev]);
+    
+    // โลจิกถัวเฉลี่ยหุ้นเวอร์ชันอัปเกรด
     if (result.cat === "invest" && result.symbol) {
       setPortfolio(prev => {
-        const existing = prev.find(p => p.symbol === result.symbol);
-        const sharesToAdd = result.shares || 1; const costUSD = result.amount / 32.54;
-        if (existing) {
-          const newShares = existing.shares + sharesToAdd;
-          return prev.map(p => p.symbol === result.symbol ? { ...p, shares: newShares, avgCost: ((existing.avgCost * existing.shares) + costUSD) / newShares } : p);
-        } else return [...prev, { symbol: result.symbol, shares: sharesToAdd, avgCost: costUSD / sharesToAdd, exchange: "US" }];
+        const newSym = result.symbol.toUpperCase();
+        const existingIndex = prev.findIndex(p => p.symbol === newSym);
+        const sharesToAdd = result.shares || 1; 
+        const costUSD = result.amount / 32.54;
+        const avgCostPerShare = costUSD / sharesToAdd;
+
+        if (existingIndex >= 0) {
+          const existing = prev[existingIndex];
+          const totalCostBefore = existing.shares * existing.avgCost;
+          const updatedShares = existing.shares + sharesToAdd;
+          const updatedAvgCost = (totalCostBefore + costUSD) / updatedShares;
+
+          const updatedPortfolio = [...prev];
+          updatedPortfolio[existingIndex] = { ...existing, shares: updatedShares, avgCost: updatedAvgCost };
+          return updatedPortfolio;
+        } else {
+          return [...prev, { symbol: newSym, shares: sharesToAdd, avgCost: avgCostPerShare, exchange: "US" }];
+        }
       });
     }
     setAdded(true);
   }
+
   return (
-    <div className="gap-16">
-      <div className="card"><div className="card-title">วาง SMS / Notification ที่นี่</div>
-        <textarea className="sms-box" placeholder="วาง SMS..." value={sms} onChange={e => { setSms(e.target.value); setResult(null); }} />
-        <div className="row mt-12"><button className="btn btn-blue" onClick={parse}>🔍 Parse SMS</button></div>
+    <div className="gap-20">
+      <div className="card">
+        <div className="card-title">วาง SMS / Notification จากแอปธนาคารที่นี่</div>
+        <textarea className="sms-box" placeholder="วางข้อความ SMS จาก MAKE by KBank หรือแอปเทรด..." value={sms} onChange={e => { setSms(e.target.value); setResult(null); }} />
+        <div className="row mt-16"><button className="btn btn-blue" onClick={parse}>🔍 ดึงข้อมูลจากข้อความ</button></div>
+        
         {result && (
           <div className="parse-result mt-16">
             {result.valid ? (
-              <><div style={{ fontSize: 13, fontWeight: 700, color: "var(--green)", marginBottom: 12 }}>✅ Parse สำเร็จ</div>
-                {Object.entries({ "ประเภท": result.type === "income" ? "💰 รายรับ" : "💸 รายจ่าย", "จำนวนเงิน": `฿${fmt(result.amount, 2)}`, "ร้านค้า": result.merchant }).map(([k, v]) => <div key={k} className="parse-row"><span className="parse-key">{k}</span><span className="parse-val">{v}</span></div>)}
-                <div className="row mt-12"><button className="btn btn-green" onClick={addToLedger} disabled={added}>{added ? "✅ เพิ่มแล้ว" : "+ บันทึกลงบัญชี"}</button></div>
+              <>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--green)", marginBottom: 16 }}>✅ พบข้อมูลที่สามารถบันทึกได้</div>
+                {Object.entries({ "ประเภท": result.type === "income" ? "💰 รายรับ" : "💸 รายจ่าย", "จำนวนเงิน": `฿${fmt(result.amount, 2)}`, "ร้านค้า / ผู้รับ": result.merchant }).map(([k, v]) => (
+                  <div key={k} className="parse-row" style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <span className="parse-key">{k}</span><span className="parse-val">{v}</span>
+                  </div>
+                ))}
+                <div className="row mt-16"><button className="btn btn-green" onClick={addToLedger} disabled={added}>{added ? "✅ บันทึกลงบัญชีเรียบร้อย" : "+ ยืนยันการบันทึก"}</button></div>
               </>
-            ) : <div style={{ color: "var(--red)", fontSize: 13 }}>❌ ไม่พบข้อมูลที่ Parse ได้</div>}
+            ) : <div style={{ color: "var(--red)", fontSize: 14 }}>❌ ไม่พบรูปแบบข้อมูลที่รองรับ กรุณาตรวจสอบข้อความอีกครั้ง</div>}
           </div>
         )}
       </div>
@@ -412,53 +518,125 @@ function SmsParserTab({ setTxs, portfolio, setPortfolio }) {
   );
 }
 
+// ---------------- PORTFOLIO TAB ----------------
 function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices }) {
   const [symbol, setSymbol] = useState(""); const [shares, setShares] = useState(""); const [cost, setCost] = useState("");
+  
+  // อัปเกรดระบบถัวเฉลี่ยเวลาเพิ่มหุ้นจากหน้า UI
   function addHolding() {
     if (!symbol || !shares || !cost) return;
-    setPortfolio(prev => [...prev, { symbol: symbol.toUpperCase(), shares: parseFloat(shares), avgCost: parseFloat(cost), exchange: "US" }]);
+    const newSym = symbol.toUpperCase();
+    const newShares = parseFloat(shares);
+    const newCost = parseFloat(cost);
+
+    setPortfolio(prev => {
+      const existingIndex = prev.findIndex(p => p.symbol === newSym);
+      if (existingIndex >= 0) {
+        // ถัวเฉลี่ยกับของเดิม
+        const existing = prev[existingIndex];
+        const totalCostBefore = existing.shares * existing.avgCost;
+        const costAdded = newShares * newCost;
+        const updatedShares = existing.shares + newShares;
+        const updatedAvgCost = (totalCostBefore + costAdded) / updatedShares;
+
+        const updatedPortfolio = [...prev];
+        updatedPortfolio[existingIndex] = { ...existing, shares: updatedShares, avgCost: updatedAvgCost };
+        return updatedPortfolio;
+      } else {
+        // เพิ่มหุ้นตัวใหม่
+        return [...prev, { symbol: newSym, shares: newShares, avgCost: newCost, exchange: "US" }];
+      }
+    });
     setSymbol(""); setShares(""); setCost("");
   }
+
   const rows = portfolio.map(p => {
     const px = livePrices[p.symbol]; const currentPrice = px?.price || p.avgCost;
     const mktVal = currentPrice * p.shares * 32.54; const costVal = p.avgCost * p.shares * 32.54;
     return { ...p, currentPrice, mktVal, costVal, pnl: mktVal - costVal, pnlPct: ((mktVal - costVal) / (costVal || 1)) * 100, change: px?.change || 0, changePct: px?.pct || 0 };
   });
-  const totalVal = rows.reduce((s, r) => s + r.mktVal, 0); const totalPnL = totalVal - rows.reduce((s, r) => s + r.costVal, 0);
+
+  const totalVal = rows.reduce((s, r) => s + r.mktVal, 0); 
+  const totalPnL = totalVal - rows.reduce((s, r) => s + r.costVal, 0);
 
   return (
-    <div className="gap-16">
+    <div className="gap-20">
       <div className="grid-3">
-        <div className="card metric-card" style={{ "--accent": "#9f7aea" }}><div className="card-title">มูลค่าพอร์ตรวม (THB)</div><div className="metric-val" style={{fontSize:isLoadingPrices?'18px':'26px'}}>{isLoadingPrices?"...":`฿${fmt(totalVal)}`}</div></div>
-        <div className="card metric-card" style={{ "--accent": totalPnL >= 0 ? "#00d68f" : "#ff4d6a" }}><div className="card-title">กำไร/ขาดทุน (UNREALIZED)</div><div className="metric-val" style={{ color: totalPnL >= 0 && !isLoadingPrices ? "var(--green)" : "var(--red)", fontSize:isLoadingPrices?'18px':'26px' }}>{isLoadingPrices?"...":`${totalPnL>=0?"+":""}฿${fmt(totalPnL)}`}</div></div>
-        <div className="card metric-card" style={{ "--accent": "#f0b429" }}><div className="card-title">USD/THB Rate</div><div className="metric-val">฿32.54</div></div>
+        <div className="card metric-card" style={{ "--accent": "#9f7aea" }}>
+          <div className="card-title">มูลค่าพอร์ตรวม (THB)</div>
+          <div className="metric-val" style={{fontSize:isLoadingPrices?'20px':'28px'}}>{isLoadingPrices?"กำลังดึงราคา...":`฿${fmt(totalVal)}`}</div>
+        </div>
+        <div className="card metric-card" style={{ "--accent": totalPnL >= 0 ? "#00d68f" : "#ff4d6a" }}>
+          <div className="card-title">กำไร/ขาดทุน (UNREALIZED)</div>
+          <div className="metric-val" style={{ color: totalPnL >= 0 && !isLoadingPrices ? "var(--green)" : "var(--red)", fontSize:isLoadingPrices?'20px':'28px' }}>
+            {isLoadingPrices?"กำลังดึงราคา...":`${totalPnL>=0?"+":""}฿${fmt(totalPnL)}`}
+          </div>
+        </div>
+        <div className="card metric-card" style={{ "--accent": "#f0b429" }}>
+          <div className="card-title">USD/THB Rate</div>
+          <div className="metric-val">฿32.54</div>
+          <div className="metric-sub">อัตราแลกเปลี่ยนปัจจุบัน</div>
+        </div>
       </div>
-      <div className="card"><div className="card-title">ราคาตลาด (REAL-TIME VIA FINNHUB) {isLoadingPrices && "⏳"}</div>
+
+      <div className="card">
+        <div className="card-title">ราคาตลาด (REAL-TIME VIA FINNHUB) {isLoadingPrices && "⏳"}</div>
         <div className="grid-3">
           {["VOO", "NVDA", "GOOG"].map((sym) => { 
             const d = livePrices[sym]; if(!d) return null;
             return (
-              <div key={sym} style={{ padding: "12px", background: "var(--bg3)", borderRadius: 10 }}>
-                <div className="ticker-card"><div><span className="ticker-sym">{sym}</span></div><div className="ticker-price">{isLoadingPrices?"...":`$${fmt(d.price, 2)}`}</div>
-                  {!isLoadingPrices && <div className={`ticker-change ${d.change >= 0 ? "up" : "dn"}`}>{d.change >= 0 ? "▲" : "▼"} {Math.abs(d.change).toFixed(2)} ({d.pct >= 0 ? "+" : ""}{d.pct.toFixed(2)}%)</div>}
+              <div key={sym} style={{ padding: "16px", background: "var(--bg3)", borderRadius: "12px", border: "1px solid var(--border2)" }}>
+                <div className="ticker-card">
+                  <div><span className="ticker-sym">{sym}</span></div>
+                  <div className="ticker-price">{isLoadingPrices?"...":`$${fmt(d.price, 2)}`}</div>
+                  {!isLoadingPrices && (
+                    <div className={`ticker-change ${d.change >= 0 ? "up" : "dn"}`} style={{ marginTop: '4px', fontWeight: 600 }}>
+                      {d.change >= 0 ? "▲" : "▼"} {Math.abs(d.change).toFixed(2)} ({d.pct >= 0 ? "+" : ""}{d.pct.toFixed(2)}%)
+                    </div>
+                  )}
                 </div>
               </div>
             )
           })}
         </div>
       </div>
-      <div className="card"><div className="section-header"><span className="section-title">หุ้น dime ที่ถือ</span></div>
+
+      <div className="card">
+        <div className="section-header"><span className="section-title">หุ้น Dime! ที่ถืออยู่</span></div>
         <table className="data-table">
-          <thead><tr><th>ชื่อ</th><th className="text-right">จำนวน</th><th className="text-right">ต้นทุน/หน่วย</th><th className="text-right">ราคาปัจจุบัน</th><th className="text-right">มูลค่า (฿)</th><th className="text-right">P&L</th></tr></thead>
+          <thead>
+            <tr>
+              <th>ชื่อหุ้น</th><th className="text-right">จำนวน</th><th className="text-right">ต้นทุนเฉลี่ย</th>
+              <th className="text-right">ราคาปัจจุบัน</th><th className="text-right">มูลค่า (฿)</th><th className="text-right">P&L</th>
+            </tr>
+          </thead>
           <tbody>
             {rows.map((r, i) => (
-              <tr key={i}><td style={{ fontWeight: 700 }}>{r.symbol}</td><td className="text-right text-mono">{r.shares}</td><td className="text-right text-mono">${fmt(r.avgCost, 2)}</td><td className="text-right text-mono">{isLoadingPrices?"...":`$${fmt(r.currentPrice, 2)}`}</td><td className="text-right text-mono">{isLoadingPrices?"...":`฿${fmt(r.mktVal)}`}</td><td className="text-right text-mono" style={{ color: r.pnl >= 0 && !isLoadingPrices ? "var(--green)" : "var(--red)", fontWeight: 600 }}>{isLoadingPrices?"...":<>{r.pnl >= 0 ? "+" : ""}฿{fmt(r.pnl)}<br /><span style={{ fontSize: 10 }}>({r.pnl >= 0 ? "+" : ""}{r.pnlPct.toFixed(1)}%)</span></>}</td></tr>
+              <tr key={i}>
+                <td style={{ fontWeight: 700, fontSize: '15px' }}>{r.symbol}</td>
+                <td className="text-right text-mono">{r.shares}</td>
+                <td className="text-right text-mono">${fmt(r.avgCost, 2)}</td>
+                <td className="text-right text-mono">{isLoadingPrices?"...":`$${fmt(r.currentPrice, 2)}`}</td>
+                <td className="text-right text-mono">{isLoadingPrices?"...":`฿${fmt(r.mktVal)}`}</td>
+                <td className="text-right text-mono" style={{ color: r.pnl >= 0 && !isLoadingPrices ? "var(--green)" : "var(--red)", fontWeight: 600 }}>
+                  {isLoadingPrices?"...":<>{r.pnl >= 0 ? "+" : ""}฿{fmt(r.pnl)}<br /><span style={{ fontSize: 11 }}>({r.pnl >= 0 ? "+" : ""}{r.pnlPct.toFixed(1)}%)</span></>}
+                </td>
+              </tr>
             ))}
+            {rows.length === 0 && <tr><td colSpan="6" style={{textAlign:'center', padding:'20px', color:'var(--text3)'}}>ไม่มีหุ้นในพอร์ต</td></tr>}
           </tbody>
         </table>
       </div>
-      <div className="card"><div className="card-title">เพิ่ม PORTFOLIO</div>
-        <div className="input-row"><input className="inp" placeholder="Symbol" value={symbol} onChange={e => setSymbol(e.target.value)} /><input className="inp" type="number" placeholder="จำนวนหุ้น" value={shares} onChange={e => setShares(e.target.value)} /><input className="inp" type="number" placeholder="ต้นทุนต่อหน่วย ($)" value={cost} onChange={e => setCost(e.target.value)} /><button className="btn btn-blue" onClick={addHolding}>+ เพิ่ม</button></div>
+
+      <div className="card">
+        <div className="card-title">เพิ่มหุ้น หรือ ซื้อถัวเฉลี่ย (AVERAGE UP/DOWN)</div>
+        <div style={{ color: 'var(--text2)', fontSize: '12px', marginBottom: '16px' }}>*หากใส่ชื่อหุ้นที่มีอยู่แล้ว ระบบจะคำนวณต้นทุนเฉลี่ยใหม่ให้อัตโนมัติ</div>
+        <div className="input-row">
+          <input className="inp" placeholder="Symbol (เช่น VOO, NVDA)" value={symbol} onChange={e => setSymbol(e.target.value)} />
+          <input className="inp" type="number" placeholder="จำนวนหุ้นที่ซื้อเพิ่ม" value={shares} onChange={e => setShares(e.target.value)} />
+          <input className="inp" type="number" placeholder="ราคาต้นทุนต่อหน่วย ($)" value={cost} onChange={e => setCost(e.target.value)} />
+          <button className="btn btn-blue" onClick={addHolding} style={{ minWidth: '120px' }}>+ บันทึก</button>
+        </div>
       </div>
     </div>
   );
@@ -468,14 +646,20 @@ function BudgetTab({ txs }) {
   const spent = {};
   txs.filter(t => t.amount < 0 && t.date.startsWith(new Date().toISOString().slice(0, 7))).forEach(t => { spent[t.cat] = (spent[t.cat] || 0) + Math.abs(t.amount); });
   return (
-    <div className="gap-16">
-      <div className="card"><div className="section-title" style={{ marginBottom: 16 }}>งบประมาณแต่ละหมวด</div>
+    <div className="gap-20">
+      <div className="card">
+        <div className="section-title" style={{ marginBottom: 20 }}>ติดตามงบประมาณแต่ละหมวด (เดือนปัจจุบัน)</div>
         {BUDGETS.map(b => {
           const cat = CATEGORIES[b.cat]; const s = spent[b.cat] || 0; const pct = Math.min((s / b.limit) * 100, 100); const over = s > b.limit;
           return (
             <div key={b.cat} className="budget-item">
-              <div className="budget-header"><span className="budget-name">{cat.icon} {cat.label}</span><span className="budget-amounts text-mono">฿{fmt(s)} / ฿{fmt(b.limit)}</span></div>
-              <div className="progress-bar"><div className="progress-fill" style={{ width: `${pct}%`, background: over ? "var(--red)" : pct > 80 ? "var(--gold)" : "var(--green)" }} /></div>
+              <div className="budget-header">
+                <span className="budget-name" style={{ fontSize: '14px' }}>{cat.icon} {cat.label}</span>
+                <span className="budget-amounts text-mono" style={{ fontSize: '13px' }}>฿{fmt(s)} / ฿{fmt(b.limit)}</span>
+              </div>
+              <div className="progress-bar" style={{ height: '8px' }}>
+                <div className="progress-fill" style={{ width: `${pct}%`, background: over ? "var(--red)" : pct > 80 ? "var(--gold)" : "var(--green)" }} />
+              </div>
             </div>
           );
         })}
@@ -489,8 +673,8 @@ function BudgetTab({ txs }) {
 // ============================================================
 const TABS = [
   { id: "dashboard", icon: "⬛", label: "Dashboard" },
-  { id: "transactions", icon: "💳", label: "รายรับ-รายจ่าย" },
-  { id: "sms", icon: "📲", label: "MAKE Parser" },
+  { id: "transactions", icon: "💳", label: "รายการเดินบัญชี" },
+  { id: "sms", icon: "📲", label: "ตัวอ่าน SMS" },
   { id: "portfolio", icon: "📈", label: "พอร์ตลงทุน" },
   { id: "budget", icon: "🎯", label: "งบประมาณ" },
 ];
@@ -509,7 +693,7 @@ export default function App() {
   const [livePrices, setLivePrices] = useState({ ...MOCK_PRICES, ...MOCK_CRYPTO });
   const [isLoadingPrices, setIsLoadingPrices] = useState(true);
 
-  // ฟังการเปลี่ยนแปลงจาก Firebase แบบ Real-time
+  // ดึงข้อมูล Firebase Real-time
   useEffect(() => {
     if (!user) return;
     setLoading(true);
@@ -519,7 +703,6 @@ export default function App() {
         setTxs(data.txs || []);
         setPortfolio(data.portfolio || []);
       } else {
-        // ถ้าเป็น User ใหม่ ให้ตั้งค่าเริ่มต้น
         const initial = { txs: INITIAL_TXS, portfolio: INITIAL_PORTFOLIO };
         setDoc(doc(db, "users", user), initial);
       }
@@ -555,7 +738,6 @@ export default function App() {
     });
   }, [user]);
 
-  // ฟังก์ชันเขียนข้อมูลลง Firebase
   const handleSetTxs = (action) => {
     setTxs(prev => {
       const next = typeof action === "function" ? action(prev) : action;
@@ -572,7 +754,6 @@ export default function App() {
     });
   };
 
-  // ระบบ Login
   const handleLogin = (e) => {
     e.preventDefault();
     if (AUTHORIZED_USERS[usernameInput] === passwordInput) {
@@ -590,13 +771,13 @@ export default function App() {
         <style>{styles}</style>
         <div className="login-card">
           <div className="login-logo">Th</div>
-          <h2 style={{marginBottom:'10px'}}>Threewit OS</h2>
-          <p style={{fontSize:'12px', color:'var(--text2)', marginBottom:'20px'}}>ระบบจัดการเงิน Cloud Database</p>
+          <h2 className="login-title">Threewit OS</h2>
+          <p className="login-sub">Personal Finance Engine</p>
           <form onSubmit={handleLogin}>
-            <input className="inp" placeholder="Username" onChange={e => setUsernameInput(e.target.value)} />
-            <input className="inp" type="password" placeholder="Password" onChange={e => setPasswordInput(e.target.value)} />
-            {loginError && <p style={{color:'var(--red)', fontSize:'12px', marginBottom:'10px'}}>รหัสผ่านไม่ถูกต้อง</p>}
-            <button className="btn btn-blue" style={{width:'100%'}} type="submit">Log In</button>
+            <input className="login-inp" placeholder="Username" onChange={e => setUsernameInput(e.target.value)} />
+            <input className="login-inp" type="password" placeholder="Password" onChange={e => setPasswordInput(e.target.value)} />
+            {loginError && <p style={{color:'var(--red)', fontSize:'12px', marginBottom:'16px', fontWeight:600}}>รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่</p>}
+            <button className="login-btn" type="submit">Access System</button>
           </form>
         </div>
       </div>
@@ -610,11 +791,14 @@ export default function App() {
         <nav className="topnav">
           <div className="topnav-brand">
             <div className="topnav-logo">Th</div>
-            <div><div className="topnav-title">Threewit OS</div><div className="topnav-sub">Cloud Sync Active • User: {user}</div></div>
+            <div>
+              <div className="topnav-title">Threewit OS</div>
+              <div className="topnav-sub">Connected as <span style={{color:'var(--blue)', fontWeight:600}}>{user}</span></div>
+            </div>
           </div>
-          <div style={{display:'flex', gap:'12px', alignItems:'center'}}>
-            <div className="topnav-sync"><div className="sync-dot" /> Live</div>
-            <button className="logout-btn" onClick={() => { localStorage.removeItem("tw_user"); setUser(null); }}>Log Out</button>
+          <div style={{display:'flex', gap:'16px', alignItems:'center'}}>
+            <div className="topnav-sync"><div className="sync-dot" /> Cloud Sync Active</div>
+            <button className="logout-btn" onClick={() => { localStorage.removeItem("tw_user"); setUser(null); }}>Disconnect</button>
           </div>
         </nav>
 
@@ -628,8 +812,10 @@ export default function App() {
 
         <div className="main">
           {loading ? (
-            <div style={{textAlign:'center', padding:'50px', color:'var(--text2)', fontFamily:'var(--font-mono)'}}>
-              กำลังซิงค์ข้อมูลจาก Firebase... ⏳
+            <div style={{textAlign:'center', padding:'80px', color:'var(--text2)', fontFamily:'var(--font-mono)', fontSize:'15px'}}>
+              <div style={{width:'30px', height:'30px', border:'3px solid var(--border2)', borderTopColor:'var(--blue)', borderRadius:'50%', animation:'spin 1s linear infinite', margin:'0 auto 16px'}} />
+              <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+              กำลังซิงค์ข้อมูลจาก Cloud Database...
             </div>
           ) : (
             <>
