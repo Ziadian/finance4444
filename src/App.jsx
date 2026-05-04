@@ -270,13 +270,16 @@ const styles = `
 // ============================================================
 // MOCK DATA
 // ============================================================
+// เติม VOO กับ GOOG เข้ามาในระบบเพื่อให้แสดงราคาและคำนวณ P&L ได้
 const MOCK_PRICES = {
   AAPL: { price: 187.23, change: 1.34, pct: 0.72, name: "Apple Inc." },
   MSFT: { price: 415.8, change: -2.1, pct: -0.5, name: "Microsoft" },
   NVDA: { price: 878.54, change: 23.4, pct: 2.73, name: "NVIDIA" },
   TSLA: { price: 177.9, change: -5.2, pct: -2.84, name: "Tesla" },
-  GOOGL: { price: 168.42, change: 0.88, pct: 0.52, name: "Alphabet" },
+  GOOGL: { price: 168.42, change: 0.88, pct: 0.52, name: "Alphabet Class A" },
+  GOOG: { price: 169.50, change: 0.90, pct: 0.55, name: "Alphabet Class C" },
   AMZN: { price: 191.75, change: 3.12, pct: 1.65, name: "Amazon" },
+  VOO: { price: 662.34, change: -0.18, pct: -0.03, name: "Vanguard S&P 500" }
 };
 
 const MOCK_CRYPTO = {
@@ -295,6 +298,7 @@ const CATEGORIES = {
   other: { label: "อื่นๆ", icon: "💸", color: "#8892a4" },
 };
 
+// เริ่มต้นแบบคลีนๆ
 const INITIAL_TXS = [];
 
 const INITIAL_PORTFOLIO = [
@@ -392,6 +396,8 @@ function fmt(n, dec = 0) {
 
 function DonutChart({ data, size = 140 }) {
   const total = data.reduce((s, d) => s + d.value, 0);
+  if (total === 0) return <svg width={size} height={size} style={{ flexShrink: 0 }}></svg>;
+  
   let acc = 0;
   const arcs = data.map(d => {
     const pct = d.value / total;
@@ -401,6 +407,9 @@ function DonutChart({ data, size = 140 }) {
   });
   const cx = size / 2, cy = size / 2, r = size * 0.38, inner = size * 0.25;
   function slice(s, p) {
+    if (p === 1) { // full circle fallback
+      return `M ${cx} ${cy - r} A ${r} ${r} 0 1 1 ${cx} ${cy + r} A ${r} ${r} 0 1 1 ${cx} ${cy - r} Z`;
+    }
     const a1 = s * 2 * Math.PI - Math.PI / 2;
     const a2 = (s + p) * 2 * Math.PI - Math.PI / 2;
     const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
@@ -454,22 +463,27 @@ function DashboardTab({ txs, portfolio }) {
   const portCost = portfolio.reduce((s, p) => s + p.avgCost * p.shares, 0);
   const portPnL = portValue - portCost;
 
-  const bankBalance = 184320;
+  // คำนวณเงินในบัญชีจากประวัติการทำรายการ (ถ้ารับ+ ถ้ายอดจ่ายเป็นลบ)
+  const bankBalance = txs.reduce((sum, t) => sum + t.amount, 0);
   const debt = 0;
-  const netWorth = bankBalance + portValue - debt;
+  
+  // แปลงมูลค่าพอร์ตเป็นเงินบาท (เพื่อแสดงผลรวมใน Net Worth)
+  const USD_THB = 32.54;
+  const portValueTHB = portValue * USD_THB;
+  const netWorth = bankBalance + portValueTHB - debt;
 
   const allocData = [
-    { label: "เงินฝาก", value: bankBalance, color: "#3d8bff" },
-    { label: "หุ้น US", value: portValue * 0.7, color: "#00d68f" },
-    { label: "คริปโต", value: portValue * 0.3, color: "#f0b429" },
+    { label: "เงินฝาก", value: Math.max(bankBalance, 0), color: "#3d8bff" },
+    { label: "หุ้น US", value: portValueTHB, color: "#00d68f" },
     { label: "หนี้สิน", value: debt, color: "#ff4d6a" },
   ].filter(d => d.value > 0);
 
-  const monthlyExpenses = [28000, 31000, 27500, 34000, expense];
+  // เคลียร์กราฟเก่าทิ้งเป็น 0 ให้เริ่มเก็บใหม่
+  const monthlyExpenses = [0, 0, 0, 0, expense];
 
   return (
     <div className="gap-16">
-      {savingRate < 20 && (
+      {savingRate < 20 && income > 0 && (
         <div className="alert alert-warning">
           ⚠️ อัตราการออมเดือนนี้ {savingRate.toFixed(1)}% — ต่ำกว่าเป้าหมาย 20%
         </div>
@@ -477,10 +491,10 @@ function DashboardTab({ txs, portfolio }) {
 
       <div className="grid-4">
         {[
-          { label: "Net Worth", val: `฿${fmt(netWorth)}`, sub: "ทรัพย์สินสุทธิ", badge: "+2.4%", btype: "badge-green", accent: "#00d68f" },
+          { label: "Net Worth", val: `฿${fmt(netWorth)}`, sub: "ทรัพย์สินสุทธิ", badge: "Live", btype: "badge-green", accent: "#00d68f" },
           { label: "รายรับเดือนนี้", val: `฿${fmt(income)}`, sub: "Current Month", badge: "=", btype: "badge-blue", accent: "#3d8bff" },
           { label: "รายจ่ายเดือนนี้", val: `฿${fmt(expense)}`, sub: `${((expense / (income || 1)) * 100).toFixed(0)}% ของรายรับ`, badge: expense > 30000 ? "เกินงบ" : "ในงบ", btype: expense > 30000 ? "badge-red" : "badge-green", accent: expense > 30000 ? "#ff4d6a" : "#00d68f" },
-          { label: "พอร์ตลงทุน", val: `฿${fmt(portValue)}`, sub: `P&L: ${portPnL >= 0 ? "+" : ""}${fmt(portPnL)}`, badge: `${portPnL >= 0 ? "+" : ""}${((portPnL / (portCost || 1)) * 100).toFixed(1)}%`, btype: portPnL >= 0 ? "badge-green" : "badge-red", accent: "#9f7aea" },
+          { label: "มูลค่าพอร์ต (THB)", val: `฿${fmt(portValueTHB)}`, sub: `P&L: ${portPnL >= 0 ? "+" : ""}$${fmt(portPnL, 2)}`, badge: `${portPnL >= 0 ? "+" : ""}${((portPnL / (portCost || 1)) * 100).toFixed(1)}%`, btype: portPnL >= 0 ? "badge-green" : "badge-red", accent: "#9f7aea" },
         ].map((m, i) => (
           <div key={i} className="card metric-card" style={{ "--accent": m.accent }}>
             <div className="card-title">{m.label}</div>
@@ -509,7 +523,7 @@ function DashboardTab({ txs, portfolio }) {
         </div>
 
         <div className="card">
-          <div className="card-title">รายจ่าย 5 เดือน</div>
+          <div className="card-title">รายจ่าย 5 เดือน (ล้างประวัติใหม่)</div>
           <MiniBarChart values={monthlyExpenses} color="#ff4d6a" height={90} />
           <div style={{ display: "flex", gap: 3, marginTop: 6 }}>
             {["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค."].map((m, i) => (
@@ -540,19 +554,13 @@ function DashboardTab({ txs, portfolio }) {
               <td>MAKE by KBank ออมทรัพย์</td>
               <td><span className="tag tag-income">เงินฝาก</span></td>
               <td className="text-right text-mono">฿{fmt(bankBalance)}</td>
-              <td className="text-right text-mono">{((bankBalance / netWorth) * 100).toFixed(1)}%</td>
+              <td className="text-right text-mono">{netWorth > 0 ? ((bankBalance / netWorth) * 100).toFixed(1) : 0}%</td>
             </tr>
             <tr>
-              <td>พอร์ต US Stocks</td>
+              <td>พอร์ต US Stocks (DIME)</td>
               <td><span className="tag tag-invest">หุ้น US</span></td>
-              <td className="text-right text-mono">฿{fmt(portValue * 0.7)}</td>
-              <td className="text-right text-mono">{((portValue * 0.7 / netWorth) * 100).toFixed(1)}%</td>
-            </tr>
-            <tr>
-              <td>Crypto</td>
-              <td><span className="tag tag-invest">คริปโต</span></td>
-              <td className="text-right text-mono">฿{fmt(portValue * 0.3)}</td>
-              <td className="text-right text-mono">{((portValue * 0.3 / netWorth) * 100).toFixed(1)}%</td>
+              <td className="text-right text-mono">฿{fmt(portValueTHB)}</td>
+              <td className="text-right text-mono">{netWorth > 0 ? ((portValueTHB / netWorth) * 100).toFixed(1) : 0}%</td>
             </tr>
             <tr style={{ borderTop: "2px solid var(--border2)" }}>
               <td style={{ fontWeight: 700 }}>Net Worth รวม</td>
@@ -568,6 +576,7 @@ function DashboardTab({ txs, portfolio }) {
         <div className="section-header">
           <span className="section-title">รายการล่าสุด</span>
         </div>
+        {txs.length === 0 && <div style={{ fontSize: 13, color: "var(--text2)", textAlign: "center", padding: "20px 0" }}>ยังไม่มีรายการทางการเงินในระบบ</div>}
         {txs.slice(0, 5).map(tx => {
           const cat = CATEGORIES[tx.cat] || CATEGORIES.other;
           return (
@@ -635,7 +644,7 @@ function TransactionsTab({ txs, setTxs }) {
       <div className="card">
         <div className="card-title">เพิ่มรายการด้วยตนเอง</div>
         <div className="input-row">
-          <input className="inp" placeholder="คำอธิบาย (เช่น ค่าอาหาร)" value={desc} onChange={e => setDesc(e.target.value)} style={{ flex: 2 }} />
+          <input className="inp" placeholder="คำอธิบาย (เช่น ยอดยกมา, เงินเดือน, ค่าอาหาร)" value={desc} onChange={e => setDesc(e.target.value)} style={{ flex: 2 }} />
           <input className="inp" type="number" placeholder="จำนวนเงิน (+/-)" value={amount} onChange={e => setAmount(e.target.value)} style={{ flex: 1 }} />
         </div>
         <div className="input-row">
@@ -674,6 +683,7 @@ function TransactionsTab({ txs, setTxs }) {
             </tr>
           </thead>
           <tbody>
+            {filtered.length === 0 && <tr><td colSpan="5" style={{ textAlign: "center", color: "var(--text2)", padding: "20px" }}>ไม่มีรายการ</td></tr>}
             {filtered.map(tx => {
               const cat = CATEGORIES[tx.cat] || CATEGORIES.other;
               return (
@@ -848,17 +858,17 @@ function PortfolioTab({ portfolio, setPortfolio }) {
     <div className="gap-16">
       <div className="grid-3">
         <div className="card metric-card" style={{ "--accent": "#9f7aea" }}>
-          <div className="card-title">มูลค่าพอร์ตรวม</div>
+          <div className="card-title">มูลค่าพอร์ตรวม (THB)</div>
           <div className="metric-val">฿{fmt(totalVal)}</div>
           <div className="metric-sub">ราคาตลาดปัจจุบัน</div>
         </div>
         <div className="card metric-card" style={{ "--accent": totalPnL >= 0 ? "#00d68f" : "#ff4d6a" }}>
-          <div className="card-title">กำไร/ขาดทุน (Unrealized)</div>
+          <div className="card-title">กำไร/ขาดทุน (UNREALIZED)</div>
           <div className="metric-val" style={{ color: totalPnL >= 0 ? "var(--green)" : "var(--red)" }}>
             {totalPnL >= 0 ? "+" : ""}฿{fmt(totalPnL)}
           </div>
           <div className={`metric-badge ${totalPnL >= 0 ? "badge-green" : "badge-red"}`}>
-            {totalPnL >= 0 ? "+" : ""}{((totalPnL / totalCost) * 100).toFixed(2)}%
+            {totalPnL >= 0 ? "+" : ""}{((totalPnL / (totalCost || 1)) * 100).toFixed(2)}%
           </div>
         </div>
         <div className="card metric-card" style={{ "--accent": "#f0b429" }}>
@@ -869,7 +879,7 @@ function PortfolioTab({ portfolio, setPortfolio }) {
       </div>
 
       <div className="card">
-        <div className="card-title">ราคาตลาด (Real-time via CoinGecko / Yahoo)</div>
+        <div className="card-title">ราคาตลาด (REAL-TIME VIA COINGECKO / YAHOO)</div>
         <div className="grid-3">
           {Object.entries(MOCK_PRICES).slice(0, 3).map(([sym, d]) => (
             <div key={sym} style={{ padding: "12px", background: "var(--bg3)", borderRadius: 10 }}>
@@ -894,7 +904,7 @@ function PortfolioTab({ portfolio, setPortfolio }) {
           <thead>
             <tr>
               <th>ชื่อ</th>
-              <th>Exchange</th>
+              <th>EXCHANGE</th>
               <th className="text-right">จำนวน</th>
               <th className="text-right">ต้นทุน/หน่วย</th>
               <th className="text-right">ราคาปัจจุบัน</th>
@@ -922,7 +932,7 @@ function PortfolioTab({ portfolio, setPortfolio }) {
       </div>
 
       <div className="card">
-        <div className="card-title">เพิ่ม / แก้ไข Portfolio</div>
+        <div className="card-title">เพิ่ม / แก้ไข PORTFOLIO</div>
         <div className="input-row">
           <input className="inp" placeholder="Symbol (เช่น AAPL, BTC)" value={symbol} onChange={e => setSymbol(e.target.value)} />
           <input className="inp" type="number" placeholder="จำนวนหุ้น / เหรียญ" value={shares} onChange={e => setShares(e.target.value)} />
@@ -941,8 +951,9 @@ function PortfolioTab({ portfolio, setPortfolio }) {
 // BUDGET / FORECAST TAB
 function BudgetTab({ txs }) {
   const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย."];
-  const actuals = [28000, 31000, 27500, 34000, 30100];
-  const forecast = [...actuals.slice(0, -1), actuals[actuals.length - 1], Math.round(actuals.reduce((a, b) => a + b) / actuals.length)];
+  // เคลียร์กราฟพยากรณ์ให้ว่างเหมือนกัน
+  const actuals = [0, 0, 0, 0, 0];
+  const forecast = [0, 0, 0, 0, 0, 0];
 
   const spent = {};
   txs.filter(t => t.amount < 0 && t.date.startsWith(new Date().toISOString().slice(0, 7))).forEach(t => {
@@ -995,10 +1006,10 @@ function BudgetTab({ txs }) {
       </div>
 
       <div className="card">
-        <div className="card-title">คาดการณ์รายจ่าย 6 เดือน</div>
+        <div className="card-title">คาดการณ์รายจ่าย 6 เดือน (รอเก็บข้อมูล)</div>
         <div style={{ display: "flex", gap: 8, alignItems: "flex-end", height: 100 }}>
           {actuals.concat([forecast[forecast.length - 1]]).map((v, i) => {
-            const max = Math.max(...actuals, forecast[forecast.length - 1]);
+            const max = Math.max(...actuals, forecast[forecast.length - 1], 1);
             const isForcast = i === actuals.length;
             return (
               <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
@@ -1042,7 +1053,6 @@ const TABS = [
 export default function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
   
-  // โหลดข้อมูลจาก localStorage (ถ้ามี) หรือใช้ค่าเริ่มต้น
   const [txs, setTxs] = useState(() => {
     const saved = localStorage.getItem("threewitos_txs");
     return saved ? JSON.parse(saved) : INITIAL_TXS;
@@ -1053,7 +1063,6 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_PORTFOLIO;
   });
 
-  // บันทึกข้อมูลลงเครื่องอัตโนมัติเมื่อมีการเปลี่ยนแปลง
   useEffect(() => {
     localStorage.setItem("threewitos_txs", JSON.stringify(txs));
   }, [txs]);
