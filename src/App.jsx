@@ -826,8 +826,54 @@ function PortfolioTab({ portfolio, setPortfolio }) {
   const [shares, setShares] = useState("");
   const [cost, setCost] = useState("");
   const [exch, setExch] = useState("US");
+  
+  // 1. สร้าง State สำหรับเก็บราคาหุ้นแบบ Real-time (ตอนแรกให้เป็นราคาจำลองก่อน)
+  const [livePrices, setLivePrices] = useState({ ...MOCK_PRICES, ...MOCK_CRYPTO });
+  const [isLoadingPrices, setIsLoadingPrices] = useState(false);
+
   const USD_THB = 32.54;
-  const prices = { ...MOCK_PRICES, ...MOCK_CRYPTO };
+
+  // 2. ใช้ useEffect ดึงข้อมูลราคาหุ้นจาก Finnhub ทันทีที่เปิดแท็บนี้
+  useEffect(() => {
+    // API Key ของคุณ
+    const API_KEY = "d7sandpr01qorsvi1jb0";
+    // ดึงเฉพาะหุ้นที่คุณมีในพอร์ต
+    const symbolsToFetch = ["VOO", "NVDA", "GOOG"]; 
+
+    setIsLoadingPrices(true);
+
+    // สร้างฟังก์ชันช่วยดึงข้อมูลทีละตัว
+    const fetchPromises = symbolsToFetch.map(sym => 
+      fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${API_KEY}`)
+        .then(res => res.json())
+        .then(data => ({ symbol: sym, price: data.c, change: data.d, pct: data.dp })) // c: Current price, d: Change, dp: Percent change
+        .catch(err => {
+          console.error(`เกิดข้อผิดพลาดในการดึงราคาหุ้น ${sym}:`, err);
+          return null; // ถ้า error ก็คืนค่า null
+        })
+    );
+
+    // รอให้ดึงข้อมูลครบทุกตัว แล้วค่อยอัปเดต State ทีเดียว
+    Promise.all(fetchPromises).then(results => {
+      setLivePrices(prevPrices => {
+        const newPrices = { ...prevPrices };
+        results.forEach(item => {
+          if (item && item.price) { // เช็กว่าดึงข้อมูลมาได้สำเร็จและมีราคา
+             // อัปเดตราคาเข้าไปทับตัวจำลอง
+             newPrices[item.symbol] = { 
+               ...newPrices[item.symbol], 
+               price: item.price, 
+               change: item.change, 
+               pct: item.pct 
+             };
+          }
+        });
+        return newPrices;
+      });
+      setIsLoadingPrices(false);
+    });
+
+  }, []); // [] หมายความว่าดึงแค่ครั้งเดียวตอนโหลดคอมโพเนนต์
 
   function addHolding() {
     if (!symbol || !shares || !cost) return;
@@ -835,14 +881,15 @@ function PortfolioTab({ portfolio, setPortfolio }) {
     setSymbol(""); setShares(""); setCost("");
   }
 
+  // 3. เปลี่ยนจาก prices เป็น livePrices ในการคำนวณ
   const rows = portfolio.map(p => {
-    const px = prices[p.symbol];
+    const px = livePrices[p.symbol];
     const currentPrice = px?.price || p.avgCost;
     const isCrypto = p.exchange === "CRYPTO";
     const mktVal = currentPrice * p.shares * (isCrypto ? 1 : USD_THB);
     const costVal = p.avgCost * p.shares * (isCrypto ? 1 : USD_THB);
     const pnl = mktVal - costVal;
-    const pnlPct = (pnl / costVal) * 100;
+    const pnlPct = (pnl / (costVal || 1)) * 100; // ป้องกันหาร 0
     const change = px?.change || 0;
     const changePct = px?.pct || 0;
     return { ...p, currentPrice, mktVal, costVal, pnl, pnlPct, change, changePct };
@@ -858,7 +905,7 @@ function PortfolioTab({ portfolio, setPortfolio }) {
         <div className="card metric-card" style={{ "--accent": "#9f7aea" }}>
           <div className="card-title">มูลค่าพอร์ตรวม (THB)</div>
           <div className="metric-val">฿{fmt(totalVal)}</div>
-          <div className="metric-sub">ราคาตลาดปัจจุบัน</div>
+          <div className="metric-sub">{isLoadingPrices ? "กำลังดึงราคาล่าสุด..." : "อัปเดตราคาแบบ Real-time แล้ว"}</div>
         </div>
         <div className="card metric-card" style={{ "--accent": totalPnL >= 0 ? "#00d68f" : "#ff4d6a" }}>
           <div className="card-title">กำไร/ขาดทุน (UNREALIZED)</div>
@@ -877,20 +924,24 @@ function PortfolioTab({ portfolio, setPortfolio }) {
       </div>
 
       <div className="card">
-        <div className="card-title">ราคาตลาด (REAL-TIME VIA COINGECKO / YAHOO)</div>
+        <div className="card-title">ราคาตลาด (REAL-TIME VIA FINNHUB) {isLoadingPrices && "⏳"}</div>
         <div className="grid-3">
-          {Object.entries(MOCK_PRICES).slice(0, 3).map(([sym, d]) => (
+          {["VOO", "NVDA", "GOOG"].map((sym) => { // วนลูปเฉพาะหุ้นในพอร์ต
+            const d = livePrices[sym];
+            if(!d) return null;
+            return (
             <div key={sym} style={{ padding: "12px", background: "var(--bg3)", borderRadius: 10 }}>
               <div className="ticker-card">
                 <div><span className="ticker-sym">{sym}</span></div>
                 <div className="ticker-name">{d.name}</div>
                 <div className="ticker-price">${fmt(d.price, 2)}</div>
                 <div className={`ticker-change ${d.change >= 0 ? "up" : "dn"}`}>
-                  {d.change >= 0 ? "▲" : "▼"} {Math.abs(d.change).toFixed(2)} ({d.pct >= 0 ? "+" : ""}{d.pct}%)
+                  {d.change >= 0 ? "▲" : "▼"} {Math.abs(d.change).toFixed(2)} ({d.pct >= 0 ? "+" : ""}{d.pct.toFixed(2)}%)
                 </div>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
