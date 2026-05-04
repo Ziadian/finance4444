@@ -6,12 +6,13 @@ import { getFirestore, doc, onSnapshot, setDoc } from "firebase/firestore";
 // ⚠️⚠️ วาง Firebase Config ของคุณตรงนี้ ⚠️⚠️
 // ============================================================
 const firebaseConfig = {
-  apiKey: "ใส่ของคุณตรงนี้",
-  authDomain: "ใส่ของคุณตรงนี้",
-  projectId: "ใส่ของคุณตรงนี้",
-  storageBucket: "ใส่ของคุณตรงนี้",
-  messagingSenderId: "ใส่ของคุณตรงนี้",
-  appId: "ใส่ของคุณตรงนี้"
+  apiKey: "AIzaSyDTeZ7tn9ewhRctgJY-Dyk_qs6Js0wPk6w",
+  authDomain: "financial-cd762.firebaseapp.com",
+  projectId: "financial-cd762",
+  storageBucket: "financial-cd762.firebasestorage.app",
+  messagingSenderId: "373396537545",
+  appId: "1:373396537545:web:2019a70625fa69dbeb8d18",
+  measurementId: "G-W1KHVD3KPE"
 };
 
 // เริ่มต้นเชื่อมต่อ Firebase
