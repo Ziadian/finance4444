@@ -270,7 +270,6 @@ const styles = `
 // ============================================================
 // MOCK DATA
 // ============================================================
-// เติม VOO กับ GOOG เข้ามาในระบบเพื่อให้แสดงราคาและคำนวณ P&L ได้
 const MOCK_PRICES = {
   VOO: { price: 662.42, change: -0.18, pct: -0.03, name: "Vanguard S&P 500" },
   NVDA: { price: 890.00, change: 23.4, pct: 2.73, name: "NVIDIA" }, 
@@ -296,7 +295,6 @@ const CATEGORIES = {
   other: { label: "อื่นๆ", icon: "💸", color: "#8892a4" },
 };
 
-// เริ่มต้นแบบคลีนๆ
 const INITIAL_TXS = [];
 
 const INITIAL_PORTFOLIO = [
@@ -320,23 +318,15 @@ function parseMakeSMS(sms) {
   const text = sms.trim();
   const result = { valid: false };
 
-  // Patterns
   const investMatch = text.match(/ซื้อ|ซื้อหุ้น|buy|ลงทุน|invest/i);
   const incomeMatch = text.match(/รับโอน|รับชำระ|เงินเข้า|โอนเงินเข้า|โอนเข้า|deposit|received/i);
-  const expenseMatch = text.match(/โอนเงิน|ชำระ|ถอนเงิน|จ่าย|payment/i);
-
-  // Amount patterns
+  
   const amtMatch = text.match(/(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*(?:บาท|THB|฿)/i)
     || text.match(/(?:จำนวน|Amount)[:\s]*(\d[\d,\.]+)/i)
     || text.match(/(\d{1,3}(?:,\d{3})*\.\d{2})/);
 
-  // Date
   const dateMatch = text.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
-
-  // Reference / merchant
   const refMatch = text.match(/(?:ที่|จาก|ไปยัง|to|from|Ref)[:\s]*([^\n]+)/i);
-
-  // Balance
   const balMatch = text.match(/(?:คงเหลือ|Balance|ยอด)[:\s:]*(\d[\d,\.]+)/i);
 
   if (amtMatch) {
@@ -348,7 +338,6 @@ function parseMakeSMS(sms) {
       result.direction = "-";
       result.cat = "invest";
 
-      // Extract Symbol and Shares
       const symMatch = text.match(/\b([A-Z]{2,10})\b/);
       if (symMatch) result.symbol = symMatch[1];
 
@@ -405,7 +394,7 @@ function DonutChart({ data, size = 140 }) {
   });
   const cx = size / 2, cy = size / 2, r = size * 0.38, inner = size * 0.25;
   function slice(s, p) {
-    if (p === 1) { // full circle fallback
+    if (p === 1) { 
       return `M ${cx} ${cy - r} A ${r} ${r} 0 1 1 ${cx} ${cy + r} A ${r} ${r} 0 1 1 ${cx} ${cy - r} Z`;
     }
     const a1 = s * 2 * Math.PI - Math.PI / 2;
@@ -446,26 +435,23 @@ function MiniBarChart({ values, color = "#3d8bff", height = 50 }) {
 // ============================================================
 
 // DASHBOARD TAB
-function DashboardTab({ txs, portfolio }) {
+function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices }) {
   const thisMonth = txs.filter(t => t.date.startsWith(new Date().toISOString().slice(0, 7)));
   const income = thisMonth.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
   const expense = thisMonth.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
   const saving = income - expense;
   const savingRate = income > 0 ? (saving / income) * 100 : 0;
 
-  const prices = { ...MOCK_PRICES, ...MOCK_CRYPTO };
   const portValue = portfolio.reduce((s, p) => {
-    const px = prices[p.symbol]?.price || p.avgCost;
+    const px = livePrices[p.symbol]?.price || p.avgCost;
     return s + px * p.shares;
   }, 0);
   const portCost = portfolio.reduce((s, p) => s + p.avgCost * p.shares, 0);
   const portPnL = portValue - portCost;
 
-  // คำนวณเงินในบัญชีจากประวัติการทำรายการ (ถ้ารับ+ ถ้ายอดจ่ายเป็นลบ)
   const bankBalance = txs.reduce((sum, t) => sum + t.amount, 0);
   const debt = 0;
   
-  // แปลงมูลค่าพอร์ตเป็นเงินบาท (เพื่อแสดงผลรวมใน Net Worth)
   const USD_THB = 32.54;
   const portValueTHB = portValue * USD_THB;
   const netWorth = bankBalance + portValueTHB - debt;
@@ -476,7 +462,6 @@ function DashboardTab({ txs, portfolio }) {
     { label: "หนี้สิน", value: debt, color: "#ff4d6a" },
   ].filter(d => d.value > 0);
 
-  // เคลียร์กราฟเก่าทิ้งเป็น 0 ให้เริ่มเก็บใหม่
   const monthlyExpenses = [0, 0, 0, 0, expense];
 
   return (
@@ -489,14 +474,14 @@ function DashboardTab({ txs, portfolio }) {
 
       <div className="grid-4">
         {[
-          { label: "Net Worth", val: `฿${fmt(netWorth)}`, sub: "ทรัพย์สินสุทธิ", badge: "Live", btype: "badge-green", accent: "#00d68f" },
+          { label: "Net Worth", val: isLoadingPrices ? "กำลังโหลด..." : `฿${fmt(netWorth)}`, sub: "ทรัพย์สินสุทธิ", badge: "Live", btype: "badge-green", accent: "#00d68f" },
           { label: "รายรับเดือนนี้", val: `฿${fmt(income)}`, sub: "Current Month", badge: "=", btype: "badge-blue", accent: "#3d8bff" },
           { label: "รายจ่ายเดือนนี้", val: `฿${fmt(expense)}`, sub: `${((expense / (income || 1)) * 100).toFixed(0)}% ของรายรับ`, badge: expense > 30000 ? "เกินงบ" : "ในงบ", btype: expense > 30000 ? "badge-red" : "badge-green", accent: expense > 30000 ? "#ff4d6a" : "#00d68f" },
-          { label: "มูลค่าพอร์ต (THB)", val: `฿${fmt(portValueTHB)}`, sub: `P&L: ${portPnL >= 0 ? "+" : ""}$${fmt(portPnL, 2)}`, badge: `${portPnL >= 0 ? "+" : ""}${((portPnL / (portCost || 1)) * 100).toFixed(1)}%`, btype: portPnL >= 0 ? "badge-green" : "badge-red", accent: "#9f7aea" },
+          { label: "มูลค่าพอร์ต (THB)", val: isLoadingPrices ? "กำลังโหลด..." : `฿${fmt(portValueTHB)}`, sub: isLoadingPrices ? "" : `P&L: ${portPnL >= 0 ? "+" : ""}$${fmt(portPnL, 2)}`, badge: isLoadingPrices ? "..." : `${portPnL >= 0 ? "+" : ""}${((portPnL / (portCost || 1)) * 100).toFixed(1)}%`, btype: portPnL >= 0 ? "badge-green" : "badge-red", accent: "#9f7aea" },
         ].map((m, i) => (
           <div key={i} className="card metric-card" style={{ "--accent": m.accent }}>
             <div className="card-title">{m.label}</div>
-            <div className="metric-val">{m.val}</div>
+            <div className="metric-val" style={{ fontSize: isLoadingPrices && (i===0 || i===3) ? "18px" : "26px" }}>{m.val}</div>
             <div className="metric-sub">{m.sub}</div>
             <div className={`metric-badge ${m.btype}`}>{m.badge}</div>
           </div>
@@ -505,7 +490,7 @@ function DashboardTab({ txs, portfolio }) {
 
       <div className="grid-2">
         <div className="card">
-          <div className="card-title">การจัดสรรสินทรัพย์</div>
+          <div className="card-title">การจัดสรรสินทรัพย์ {isLoadingPrices && "..."}</div>
           <div className="donut-wrap">
             <DonutChart data={allocData} size={150} />
             <div className="donut-legend">
@@ -557,13 +542,13 @@ function DashboardTab({ txs, portfolio }) {
             <tr>
               <td>พอร์ต US Stocks (DIME)</td>
               <td><span className="tag tag-invest">หุ้น US</span></td>
-              <td className="text-right text-mono">฿{fmt(portValueTHB)}</td>
+              <td className="text-right text-mono">{isLoadingPrices ? "กำลังโหลด..." : `฿${fmt(portValueTHB)}`}</td>
               <td className="text-right text-mono">{netWorth > 0 ? ((portValueTHB / netWorth) * 100).toFixed(1) : 0}%</td>
             </tr>
             <tr style={{ borderTop: "2px solid var(--border2)" }}>
               <td style={{ fontWeight: 700 }}>Net Worth รวม</td>
               <td></td>
-              <td className="text-right text-mono" style={{ color: "var(--green)", fontWeight: 700 }}>฿{fmt(netWorth)}</td>
+              <td className="text-right text-mono" style={{ color: "var(--green)", fontWeight: 700 }}>{isLoadingPrices ? "กำลังโหลด..." : `฿${fmt(netWorth)}`}</td>
               <td className="text-right text-mono" style={{ color: "var(--green)", fontWeight: 700 }}>100%</td>
             </tr>
           </tbody>
@@ -821,59 +806,12 @@ function SmsParserTab({ setTxs, portfolio, setPortfolio }) {
 }
 
 // PORTFOLIO TAB
-function PortfolioTab({ portfolio, setPortfolio }) {
+function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices }) {
   const [symbol, setSymbol] = useState("");
   const [shares, setShares] = useState("");
   const [cost, setCost] = useState("");
   const [exch, setExch] = useState("US");
-  
-  // 1. สร้าง State สำหรับเก็บราคาหุ้นแบบ Real-time (ตอนแรกให้เป็นราคาจำลองก่อน)
-  const [livePrices, setLivePrices] = useState({ ...MOCK_PRICES, ...MOCK_CRYPTO });
-  const [isLoadingPrices, setIsLoadingPrices] = useState(false);
-
   const USD_THB = 32.54;
-
-  // 2. ใช้ useEffect ดึงข้อมูลราคาหุ้นจาก Finnhub ทันทีที่เปิดแท็บนี้
-  useEffect(() => {
-    // API Key ของคุณ
-    const API_KEY = "d7sandpr01qorsvi1jagd7sandpr01qorsvi1jb0";
-    // ดึงเฉพาะหุ้นที่คุณมีในพอร์ต
-    const symbolsToFetch = ["VOO", "NVDA", "GOOG"]; 
-
-    setIsLoadingPrices(true);
-
-    // สร้างฟังก์ชันช่วยดึงข้อมูลทีละตัว
-    const fetchPromises = symbolsToFetch.map(sym => 
-      fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${API_KEY}`)
-        .then(res => res.json())
-        .then(data => ({ symbol: sym, price: data.c, change: data.d, pct: data.dp })) // c: Current price, d: Change, dp: Percent change
-        .catch(err => {
-          console.error(`เกิดข้อผิดพลาดในการดึงราคาหุ้น ${sym}:`, err);
-          return null; // ถ้า error ก็คืนค่า null
-        })
-    );
-
-    // รอให้ดึงข้อมูลครบทุกตัว แล้วค่อยอัปเดต State ทีเดียว
-    Promise.all(fetchPromises).then(results => {
-      setLivePrices(prevPrices => {
-        const newPrices = { ...prevPrices };
-        results.forEach(item => {
-          if (item && item.price) { // เช็กว่าดึงข้อมูลมาได้สำเร็จและมีราคา
-             // อัปเดตราคาเข้าไปทับตัวจำลอง
-             newPrices[item.symbol] = { 
-               ...newPrices[item.symbol], 
-               price: item.price, 
-               change: item.change, 
-               pct: item.pct 
-             };
-          }
-        });
-        return newPrices;
-      });
-      setIsLoadingPrices(false);
-    });
-
-  }, []); // [] หมายความว่าดึงแค่ครั้งเดียวตอนโหลดคอมโพเนนต์
 
   function addHolding() {
     if (!symbol || !shares || !cost) return;
@@ -881,7 +819,6 @@ function PortfolioTab({ portfolio, setPortfolio }) {
     setSymbol(""); setShares(""); setCost("");
   }
 
-  // 3. เปลี่ยนจาก prices เป็น livePrices ในการคำนวณ
   const rows = portfolio.map(p => {
     const px = livePrices[p.symbol];
     const currentPrice = px?.price || p.avgCost;
@@ -889,7 +826,7 @@ function PortfolioTab({ portfolio, setPortfolio }) {
     const mktVal = currentPrice * p.shares * (isCrypto ? 1 : USD_THB);
     const costVal = p.avgCost * p.shares * (isCrypto ? 1 : USD_THB);
     const pnl = mktVal - costVal;
-    const pnlPct = (pnl / (costVal || 1)) * 100; // ป้องกันหาร 0
+    const pnlPct = (pnl / (costVal || 1)) * 100; 
     const change = px?.change || 0;
     const changePct = px?.pct || 0;
     return { ...p, currentPrice, mktVal, costVal, pnl, pnlPct, change, changePct };
@@ -904,16 +841,16 @@ function PortfolioTab({ portfolio, setPortfolio }) {
       <div className="grid-3">
         <div className="card metric-card" style={{ "--accent": "#9f7aea" }}>
           <div className="card-title">มูลค่าพอร์ตรวม (THB)</div>
-          <div className="metric-val">฿{fmt(totalVal)}</div>
-          <div className="metric-sub">{isLoadingPrices ? "กำลังดึงราคาล่าสุด..." : "อัปเดตราคาแบบ Real-time แล้ว"}</div>
+          <div className="metric-val" style={{ fontSize: isLoadingPrices ? "18px" : "26px" }}>{isLoadingPrices ? "กำลังโหลด..." : `฿${fmt(totalVal)}`}</div>
+          <div className="metric-sub">{isLoadingPrices ? "รอข้อมูล API..." : "ราคาตลาดปัจจุบัน"}</div>
         </div>
         <div className="card metric-card" style={{ "--accent": totalPnL >= 0 ? "#00d68f" : "#ff4d6a" }}>
           <div className="card-title">กำไร/ขาดทุน (UNREALIZED)</div>
-          <div className="metric-val" style={{ color: totalPnL >= 0 ? "var(--green)" : "var(--red)" }}>
-            {totalPnL >= 0 ? "+" : ""}฿{fmt(totalPnL)}
+          <div className="metric-val" style={{ color: totalPnL >= 0 && !isLoadingPrices ? "var(--green)" : "var(--red)", fontSize: isLoadingPrices ? "18px" : "26px" }}>
+            {isLoadingPrices ? "กำลังโหลด..." : `${totalPnL >= 0 ? "+" : ""}฿${fmt(totalPnL)}`}
           </div>
           <div className={`metric-badge ${totalPnL >= 0 ? "badge-green" : "badge-red"}`}>
-            {totalPnL >= 0 ? "+" : ""}{((totalPnL / (totalCost || 1)) * 100).toFixed(2)}%
+            {isLoadingPrices ? "..." : `${totalPnL >= 0 ? "+" : ""}${((totalPnL / (totalCost || 1)) * 100).toFixed(2)}%`}
           </div>
         </div>
         <div className="card metric-card" style={{ "--accent": "#f0b429" }}>
@@ -924,9 +861,9 @@ function PortfolioTab({ portfolio, setPortfolio }) {
       </div>
 
       <div className="card">
-        <div className="card-title">ราคาตลาด (REAL-TIME VIA FINNHUB) {isLoadingPrices && "⏳"}</div>
+        <div className="card-title">ราคาตลาด (REAL-TIME VIA FINNHUB) {isLoadingPrices && "⏳ กำลังอัปเดต..."}</div>
         <div className="grid-3">
-          {["VOO", "NVDA", "GOOG"].map((sym) => { // วนลูปเฉพาะหุ้นในพอร์ต
+          {["VOO", "NVDA", "GOOG"].map((sym) => { 
             const d = livePrices[sym];
             if(!d) return null;
             return (
@@ -934,10 +871,12 @@ function PortfolioTab({ portfolio, setPortfolio }) {
               <div className="ticker-card">
                 <div><span className="ticker-sym">{sym}</span></div>
                 <div className="ticker-name">{d.name}</div>
-                <div className="ticker-price">${fmt(d.price, 2)}</div>
-                <div className={`ticker-change ${d.change >= 0 ? "up" : "dn"}`}>
-                  {d.change >= 0 ? "▲" : "▼"} {Math.abs(d.change).toFixed(2)} ({d.pct >= 0 ? "+" : ""}{d.pct.toFixed(2)}%)
-                </div>
+                <div className="ticker-price">{isLoadingPrices ? "..." : `$${fmt(d.price, 2)}`}</div>
+                {!isLoadingPrices && (
+                  <div className={`ticker-change ${d.change >= 0 ? "up" : "dn"}`}>
+                    {d.change >= 0 ? "▲" : "▼"} {Math.abs(d.change).toFixed(2)} ({d.pct >= 0 ? "+" : ""}{d.pct.toFixed(2)}%)
+                  </div>
+                )}
               </div>
             </div>
             )
@@ -968,11 +907,13 @@ function PortfolioTab({ portfolio, setPortfolio }) {
                 <td><span className={`tag ${r.exchange === "CRYPTO" ? "tag-gold" : "tag-blue"}`}>{r.exchange}</span></td>
                 <td className="text-right text-mono">{r.shares}</td>
                 <td className="text-right text-mono">${fmt(r.avgCost, 2)}</td>
-                <td className="text-right text-mono">${fmt(r.currentPrice, 2)}</td>
-                <td className="text-right text-mono">฿{fmt(r.mktVal)}</td>
-                <td className="text-right text-mono" style={{ color: r.pnl >= 0 ? "var(--green)" : "var(--red)", fontWeight: 600 }}>
-                  {r.pnl >= 0 ? "+" : ""}฿{fmt(r.pnl)}<br />
-                  <span style={{ fontSize: 10 }}>({r.pnl >= 0 ? "+" : ""}{r.pnlPct.toFixed(1)}%)</span>
+                <td className="text-right text-mono">{isLoadingPrices ? "..." : `$${fmt(r.currentPrice, 2)}`}</td>
+                <td className="text-right text-mono">{isLoadingPrices ? "..." : `฿${fmt(r.mktVal)}`}</td>
+                <td className="text-right text-mono" style={{ color: r.pnl >= 0 && !isLoadingPrices ? "var(--green)" : "var(--red)", fontWeight: 600 }}>
+                  {isLoadingPrices ? "..." : <>
+                    {r.pnl >= 0 ? "+" : ""}฿{fmt(r.pnl)}<br />
+                    <span style={{ fontSize: 10 }}>({r.pnl >= 0 ? "+" : ""}{r.pnlPct.toFixed(1)}%)</span>
+                  </>}
                 </td>
               </tr>
             ))}
@@ -1000,7 +941,6 @@ function PortfolioTab({ portfolio, setPortfolio }) {
 // BUDGET / FORECAST TAB
 function BudgetTab({ txs }) {
   const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย."];
-  // เคลียร์กราฟพยากรณ์ให้ว่างเหมือนกัน
   const actuals = [0, 0, 0, 0, 0];
   const forecast = [0, 0, 0, 0, 0, 0];
 
@@ -1112,6 +1052,41 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_PORTFOLIO;
   });
 
+  // สถานะราคาและ Loading อยู่ที่นี่เลย เพื่อให้ใช้ได้ทุกหน้า
+  const [livePrices, setLivePrices] = useState({ ...MOCK_PRICES, ...MOCK_CRYPTO });
+  const [isLoadingPrices, setIsLoadingPrices] = useState(true);
+
+  // โหลดราคาจาก API รอบเดียวจบ
+  useEffect(() => {
+    const API_KEY = "d7sandpr01qorsvi1jagd7sandpr01qorsvi1jb0";
+    const symbolsToFetch = ["VOO", "NVDA", "GOOG"]; 
+
+    const fetchPromises = symbolsToFetch.map(sym => 
+      fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${API_KEY}`)
+        .then(res => res.json())
+        .then(data => ({ symbol: sym, price: data.c, change: data.d, pct: data.dp }))
+        .catch(err => null)
+    );
+
+    Promise.all(fetchPromises).then(results => {
+      setLivePrices(prevPrices => {
+        const newPrices = { ...prevPrices };
+        results.forEach(item => {
+          if (item && item.price) {
+             newPrices[item.symbol] = { 
+               ...newPrices[item.symbol], 
+               price: item.price, 
+               change: item.change, 
+               pct: item.pct 
+             };
+          }
+        });
+        return newPrices;
+      });
+      setIsLoadingPrices(false);
+    });
+  }, []);
+
   useEffect(() => {
     localStorage.setItem("threewitos_txs", JSON.stringify(txs));
   }, [txs]);
@@ -1151,10 +1126,10 @@ export default function App() {
 
         {/* CONTENT */}
         <div className="main">
-          {activeTab === "dashboard" && <DashboardTab txs={txs} portfolio={portfolio} />}
+          {activeTab === "dashboard" && <DashboardTab txs={txs} portfolio={portfolio} livePrices={livePrices} isLoadingPrices={isLoadingPrices} />}
           {activeTab === "transactions" && <TransactionsTab txs={txs} setTxs={setTxs} />}
           {activeTab === "sms" && <SmsParserTab setTxs={setTxs} portfolio={portfolio} setPortfolio={setPortfolio} />}
-          {activeTab === "portfolio" && <PortfolioTab portfolio={portfolio} setPortfolio={setPortfolio} />}
+          {activeTab === "portfolio" && <PortfolioTab portfolio={portfolio} setPortfolio={setPortfolio} livePrices={livePrices} isLoadingPrices={isLoadingPrices} />}
           {activeTab === "budget" && <BudgetTab txs={txs} />}
         </div>
       </div>
