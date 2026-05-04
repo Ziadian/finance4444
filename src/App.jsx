@@ -272,14 +272,12 @@ const styles = `
 // ============================================================
 // เติม VOO กับ GOOG เข้ามาในระบบเพื่อให้แสดงราคาและคำนวณ P&L ได้
 const MOCK_PRICES = {
-  AAPL: { price: 187.23, change: 1.34, pct: 0.72, name: "Apple Inc." },
-  MSFT: { price: 415.8, change: -2.1, pct: -0.5, name: "Microsoft" },
-  NVDA: { price: 878.54, change: 23.4, pct: 2.73, name: "NVIDIA" },
+  VOO: { price: 662.42, change: -0.18, pct: -0.03, name: "Vanguard S&P 500" },
+  NVDA: { price: 890.00, change: 23.4, pct: 2.73, name: "NVIDIA" }, 
+  GOOG: { price: 170.00, change: 0.90, pct: 0.55, name: "Alphabet Class C" }, 
   TSLA: { price: 177.9, change: -5.2, pct: -2.84, name: "Tesla" },
   GOOGL: { price: 168.42, change: 0.88, pct: 0.52, name: "Alphabet Class A" },
-  GOOG: { price: 169.50, change: 0.90, pct: 0.55, name: "Alphabet Class C" },
   AMZN: { price: 191.75, change: 3.12, pct: 1.65, name: "Amazon" },
-  VOO: { price: 662.34, change: -0.18, pct: -0.03, name: "Vanguard S&P 500" }
 };
 
 const MOCK_CRYPTO = {
