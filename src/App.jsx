@@ -836,7 +836,7 @@ function PortfolioTab({ portfolio, setPortfolio }) {
   // 2. ใช้ useEffect ดึงข้อมูลราคาหุ้นจาก Finnhub ทันทีที่เปิดแท็บนี้
   useEffect(() => {
     // API Key ของคุณ
-    const API_KEY = "d7sandpr01qorsvi1jb0";
+    const API_KEY = "d7sandpr01qorsvi1jagd7sandpr01qorsvi1jb0";
     // ดึงเฉพาะหุ้นที่คุณมีในพอร์ต
     const symbolsToFetch = ["VOO", "NVDA", "GOOG"]; 
 
