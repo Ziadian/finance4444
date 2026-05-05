@@ -102,7 +102,7 @@ const styles = `
   .login-btn-styled:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(61, 139, 255, 0.4); }
 
   /* =========================================
-     MAIN APP STYLES
+     MAIN APP STYLES (ต้นฉบับ 100%)
      ========================================= */
   .topnav {
     display: flex; align-items: center; justify-content: space-between;
@@ -197,6 +197,10 @@ const styles = `
   .btn-blue { background: var(--blue); color: #fff; }
   .btn-ghost { background: var(--bg3); color: var(--text); border: 1px solid var(--border2); }
   .btn-red { background: var(--red); color: #fff; }
+  
+  /* ปุ่ม Edit / Delete ในตาราง */
+  .btn-action { background: none; border: none; cursor: pointer; padding: 4px 6px; font-size: 14px; opacity: 0.7; transition: 0.2s; }
+  .btn-action:hover { opacity: 1; transform: scale(1.15); }
 
   /* แก้ไขบัค SMS Mobile */
   .sms-box { width: 100%; min-height: 100px; padding: 12px; background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px; color: var(--text) !important; font-size: 12px; font-family: var(--font-mono); resize: vertical; outline: none; -webkit-appearance: none; }
@@ -382,7 +386,6 @@ function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices, exchangeRat
   const bankBalance = txs.reduce((sum, t) => sum + t.amount, 0);
   const debt = 0;
   
-  // ใช้ค่าเงินบาทแบบ Dynamic จาก Firebase
   const portValueTHB = portValue * exchangeRate;
   const netWorth = bankBalance + portValueTHB - debt;
   
@@ -454,11 +457,37 @@ function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices, exchangeRat
 function TransactionsTab({ txs, setTxs }) {
   const [desc, setDesc] = useState(""); const [amount, setAmount] = useState("");
   const [cat, setCat] = useState("food"); const [type, setType] = useState("var"); const [filter, setFilter] = useState("all");
-  function addTx() {
+  
+  // ระบบแก้ไขข้อมูล
+  const [editId, setEditId] = useState(null);
+
+  function saveTx() {
     if (!desc || !amount) return;
-    const newTx = { id: Date.now(), date: new Date().toISOString().slice(0, 10), desc, amount: parseFloat(amount), cat, type, src: "manual" };
-    setTxs(prev => [newTx, ...prev]); setDesc(""); setAmount("");
+    if (editId) {
+      setTxs(prev => prev.map(t => t.id === editId ? { ...t, desc, amount: parseFloat(amount), cat, type } : t));
+      setEditId(null);
+    } else {
+      const newTx = { id: Date.now(), date: new Date().toISOString().slice(0, 10), desc, amount: parseFloat(amount), cat, type, src: "manual" };
+      setTxs(prev => [newTx, ...prev]);
+    }
+    setDesc(""); setAmount("");
   }
+
+  function editTx(tx) {
+    setDesc(tx.desc);
+    setAmount(tx.amount.toString());
+    setCat(tx.cat);
+    setType(tx.type);
+    setEditId(tx.id);
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // เลื่อนจอขึ้นไปให้เห็นฟอร์มแก้
+  }
+
+  function deleteTx(id) {
+    if(window.confirm("ต้องการลบรายการนี้ใช่หรือไม่?")) {
+      setTxs(prev => prev.filter(t => t.id !== id));
+    }
+  }
+
   const filtered = filter === "all" ? txs : filter === "income" ? txs.filter(t => t.amount > 0) : txs.filter(t => t.amount < 0);
   const totalIn = txs.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0); const totalOut = txs.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
   
@@ -469,22 +498,35 @@ function TransactionsTab({ txs, setTxs }) {
         <div className="card metric-card" style={{ "--accent": "#ff4d6a" }}><div className="card-title">รายจ่ายรวม</div><div className="metric-val">฿{fmt(totalOut)}</div><div className="metric-badge badge-red">-รายจ่าย</div></div>
         <div className="card metric-card" style={{ "--accent": "#3d8bff" }}><div className="card-title">คงเหลือสุทธิ</div><div className="metric-val" style={{ color: totalIn - totalOut > 0 ? "var(--green)" : "var(--red)" }}>฿{fmt(totalIn - totalOut)}</div><div className={`metric-badge ${totalIn - totalOut > 0 ? "badge-green" : "badge-red"}`}>Net Flow</div></div>
       </div>
-      <div className="card"><div className="card-title">เพิ่มรายการด้วยตนเอง</div>
+      
+      {/* ปรับปรุงฟอร์มรองรับโหมดแก้ไข */}
+      <div className="card"><div className="card-title" style={{ color: editId ? 'var(--blue)' : 'var(--text3)' }}>{editId ? '✏️ กำลังแก้ไขรายการ' : 'เพิ่มรายการด้วยตนเอง'}</div>
         <div className="input-row"><input className="inp" placeholder="คำอธิบาย (เช่น ยอดยกมา, เงินเดือน, ค่าอาหาร)" value={desc} onChange={e => setDesc(e.target.value)} style={{ flex: 2 }} /><input className="inp" type="number" placeholder="จำนวนเงิน (+/-)" value={amount} onChange={e => setAmount(e.target.value)} style={{ flex: 1 }} /></div>
-        <div className="input-row"><select className="inp" value={cat} onChange={e => setCat(e.target.value)}>{Object.entries(CATEGORIES).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}</select><select className="inp" value={type} onChange={e => setType(e.target.value)}><option value="fix">🔒 Fix Cost (คงที่)</option><option value="var">📊 Variable Cost (ผันแปร)</option></select><button className="btn btn-green" onClick={addTx}>+ เพิ่ม</button></div>
+        <div className="input-row">
+          <select className="inp" value={cat} onChange={e => setCat(e.target.value)}>{Object.entries(CATEGORIES).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}</select>
+          <select className="inp" value={type} onChange={e => setType(e.target.value)}><option value="fix">🔒 Fix Cost (คงที่)</option><option value="var">📊 Variable Cost (ผันแปร)</option></select>
+          <button className={editId ? "btn btn-blue" : "btn btn-green"} onClick={saveTx}>{editId ? "💾 บันทึกแก้ไข" : "+ เพิ่ม"}</button>
+          {editId && <button className="btn btn-ghost" onClick={() => { setEditId(null); setDesc(""); setAmount(""); }}>❌ ยกเลิก</button>}
+        </div>
       </div>
       <div className="card">
         <div className="section-header"><span className="section-title">ประวัติรายการ ({filtered.length})</span>
           <div className="row" style={{ gap: 6 }}>{["all", "income", "expense"].map(f => <button key={f} className={`btn btn-ghost ${filter === f ? "active" : ""}`} style={{ padding: "5px 12px", fontSize: 12, background: filter === f ? "var(--border2)" : undefined }} onClick={() => setFilter(f)}>{f === "all" ? "ทั้งหมด" : f === "income" ? "รายรับ" : "รายจ่าย"}</button>)}</div>
         </div>
         <table className="data-table">
-          <thead><tr><th>วันที่</th><th>รายการ</th><th>หมวด</th><th>ประเภท</th><th className="text-right">จำนวน</th></tr></thead>
+          <thead><tr><th>วันที่</th><th>รายการ</th><th>หมวด</th><th>ประเภท</th><th className="text-right">จำนวน</th><th className="text-right">จัดการ</th></tr></thead>
           <tbody>
-            {filtered.length === 0 && <tr><td colSpan="5" style={{ textAlign: "center", color: "var(--text2)", padding: "20px" }}>ไม่มีรายการ</td></tr>}
+            {filtered.length === 0 && <tr><td colSpan="6" style={{ textAlign: "center", color: "var(--text2)", padding: "20px" }}>ไม่มีรายการ</td></tr>}
             {filtered.map(tx => {
               const cat = CATEGORIES[tx.cat] || CATEGORIES.other;
               return (
-                <tr key={tx.id}><td className="text-mono text-xs text-muted">{tx.date}</td><td style={{ fontSize: 13 }}>{tx.desc}</td><td><span style={{ fontSize: 12 }}>{cat.icon} {cat.label}</span></td><td><span className={tx.type === "fix" ? "tag tag-fix" : "tag tag-var"}>{tx.type === "fix" ? "Fix" : "Var"}</span></td><td className="text-right text-mono" style={{ color: tx.amount > 0 ? "var(--green)" : "var(--text)", fontWeight: 600 }}>{tx.amount > 0 ? "+" : ""}฿{fmt(Math.abs(tx.amount))}</td></tr>
+                <tr key={tx.id}>
+                  <td className="text-mono text-xs text-muted">{tx.date}</td><td style={{ fontSize: 13 }}>{tx.desc}</td><td><span style={{ fontSize: 12 }}>{cat.icon} {cat.label}</span></td><td><span className={tx.type === "fix" ? "tag tag-fix" : "tag tag-var"}>{tx.type === "fix" ? "Fix" : "Var"}</span></td><td className="text-right text-mono" style={{ color: tx.amount > 0 ? "var(--green)" : "var(--text)", fontWeight: 600 }}>{tx.amount > 0 ? "+" : ""}฿{fmt(Math.abs(tx.amount))}</td>
+                  <td className="text-right">
+                    <button className="btn-action" onClick={() => editTx(tx)} title="แก้ไข">✏️</button>
+                    <button className="btn-action" onClick={() => deleteTx(tx.id)} title="ลบ">🗑️</button>
+                  </td>
+                </tr>
               );
             })}
           </tbody>
@@ -506,7 +548,7 @@ function SmsParserTab({ setTxs, portfolio, setPortfolio, exchangeRate }) {
     if (result.cat === "invest" && result.symbol) {
       setPortfolio(prev => {
         const existing = prev.find(p => p.symbol === result.symbol); const sharesToAdd = result.shares || 1; 
-        const costUSD = result.amount / exchangeRate; // ใช้ค่าเงินบาทแบบ Dynamic
+        const costUSD = result.amount / exchangeRate;
         if (existing) {
           const totalCost = (existing.avgCost * existing.shares) + costUSD; const newShares = existing.shares + sharesToAdd; const newAvgCost = totalCost / newShares;
           return prev.map(p => p.symbol === result.symbol ? { ...p, shares: newShares, avgCost: newAvgCost } : p);
@@ -564,6 +606,13 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
     setSymbol(""); setShares(""); setCost("");
   }
 
+  // ระบบลบหุ้น
+  function deleteHolding(sym) {
+    if(window.confirm(`ต้องการลบหุ้น ${sym} ออกจากพอร์ตใช่หรือไม่?`)) {
+      setPortfolio(prev => prev.filter(p => p.symbol !== sym));
+    }
+  }
+
   const rows = portfolio.map(p => {
     const px = livePrices[p.symbol]; const currentPrice = px?.price || p.avgCost; const isCrypto = p.exchange === "CRYPTO";
     const mktVal = currentPrice * p.shares * (isCrypto ? 1 : exchangeRate); const costVal = p.avgCost * p.shares * (isCrypto ? 1 : exchangeRate);
@@ -610,10 +659,15 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
       </div>
       <div className="card"><div className="section-header"><span className="section-title">หุ้น dime ที่ถือ</span></div>
         <table className="data-table">
-          <thead><tr><th>ชื่อ</th><th>EXCHANGE</th><th className="text-right">จำนวน</th><th className="text-right">ต้นทุน/หน่วย</th><th className="text-right">ราคาปัจจุบัน</th><th className="text-right">มูลค่า (฿)</th><th className="text-right">P&L</th></tr></thead>
+          <thead><tr><th>ชื่อ</th><th>EXCHANGE</th><th className="text-right">จำนวน</th><th className="text-right">ต้นทุน/หน่วย</th><th className="text-right">ราคาปัจจุบัน</th><th className="text-right">มูลค่า (฿)</th><th className="text-right">P&L</th><th className="text-right">จัดการ</th></tr></thead>
           <tbody>
             {rows.map((r, i) => (
-              <tr key={i}><td style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>{r.symbol}</td><td><span className={`tag ${r.exchange === "CRYPTO" ? "tag-gold" : "tag-blue"}`}>{r.exchange}</span></td><td className="text-right text-mono">{r.shares}</td><td className="text-right text-mono">${fmt(r.avgCost, 2)}</td><td className="text-right text-mono">{isLoadingPrices ? "..." : `$${fmt(r.currentPrice, 2)}`}</td><td className="text-right text-mono">{isLoadingPrices ? "..." : `฿${fmt(r.mktVal)}`}</td><td className="text-right text-mono" style={{ color: r.pnl >= 0 && !isLoadingPrices ? "var(--green)" : "var(--red)", fontWeight: 600 }}>{isLoadingPrices ? "..." : <>{r.pnl >= 0 ? "+" : ""}฿{fmt(r.pnl)}<br /><span style={{ fontSize: 10 }}>({r.pnl >= 0 ? "+" : ""}{r.pnlPct.toFixed(1)}%)</span></>}</td></tr>
+              <tr key={i}>
+                <td style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>{r.symbol}</td><td><span className={`tag ${r.exchange === "CRYPTO" ? "tag-gold" : "tag-blue"}`}>{r.exchange}</span></td><td className="text-right text-mono">{r.shares}</td><td className="text-right text-mono">${fmt(r.avgCost, 2)}</td><td className="text-right text-mono">{isLoadingPrices ? "..." : `$${fmt(r.currentPrice, 2)}`}</td><td className="text-right text-mono">{isLoadingPrices ? "..." : `฿${fmt(r.mktVal)}`}</td><td className="text-right text-mono" style={{ color: r.pnl >= 0 && !isLoadingPrices ? "var(--green)" : "var(--red)", fontWeight: 600 }}>{isLoadingPrices ? "..." : <>{r.pnl >= 0 ? "+" : ""}฿{fmt(r.pnl)}<br /><span style={{ fontSize: 10 }}>({r.pnl >= 0 ? "+" : ""}{r.pnlPct.toFixed(1)}%)</span></>}</td>
+                <td className="text-right">
+                  <button className="btn-action" onClick={() => deleteHolding(r.symbol)} title="ลบ">🗑️</button>
+                </td>
+              </tr>
             ))}
           </tbody>
         </table>
@@ -687,16 +741,21 @@ export default function App() {
   const [passwordInput, setPasswordInput] = useState("");
   const [loginError, setLoginError] = useState(false);
 
-  const [activeTab, setActiveTab] = useState("dashboard");
+  // 🔥 ใช้ localStorage จำ Tab ปัจจุบันไว้ ไม่ต้องกลับไปเริ่มใหม่ตอนรีเฟรช
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem("tw_tab") || "dashboard");
+  
   const [txs, setTxs] = useState([]);
   const [portfolio, setPortfolio] = useState([]);
-  
-  // เพิ่ม State สำหรับจัดการค่าเงินบาท (เริ่มต้น 32.54)
   const [exchangeRate, setExchangeRate] = useState(32.54);
   const [loading, setLoading] = useState(true);
 
   const [livePrices, setLivePrices] = useState({ ...MOCK_PRICES, ...MOCK_CRYPTO });
   const [isLoadingPrices, setIsLoadingPrices] = useState(true);
+
+  // เมื่อเปลี่ยนหน้า Tab ให้จำลง localStorage ทันที
+  useEffect(() => {
+    localStorage.setItem("tw_tab", activeTab);
+  }, [activeTab]);
 
   // 1. เชื่อม Firebase
   useEffect(() => {
@@ -707,7 +766,6 @@ export default function App() {
         const data = res.data();
         setTxs(data.txs || []);
         setPortfolio(data.portfolio || []);
-        // ดึงค่าเงินที่เซฟไว้ ถ้าไม่มีให้ใช้ 32.54
         setExchangeRate(data.exchangeRate || 32.54);
       } else {
         const initial = { txs: INITIAL_TXS, portfolio: INITIAL_PORTFOLIO, exchangeRate: 32.54 };
@@ -759,13 +817,11 @@ export default function App() {
     });
   };
 
-  // ฟังก์ชันบันทึกค่าเงินบาทลง Cloud
   const handleSetExchangeRate = (val) => {
     setExchangeRate(val);
     if (user) setDoc(doc(db, "users", user), { exchangeRate: val }, { merge: true });
   };
 
-  // จัดการล็อกอิน
   const handleLogin = (e) => {
     e.preventDefault();
     if (AUTHORIZED_USERS[usernameInput] === passwordInput) {
