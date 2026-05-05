@@ -19,8 +19,8 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const AUTHORIZED_USERS = {
-  "admin": "zxc",
-  "friend": "welcome"
+  "Threewit": "zxc",
+  "hi": "hi"
 };
 
 // ============================================================
@@ -271,12 +271,11 @@ const CATEGORIES = {
   income: { label: "รายรับ", icon: "💰", color: "#00d68f" },
   other: { label: "อื่นๆ", icon: "💸", color: "#8892a4" },
 };
+
+// ⚠️ เคลียร์พอร์ตให้ว่างเปล่า 100% สำหรับการเริ่มต้นใหม่
 const INITIAL_TXS = [];
-const INITIAL_PORTFOLIO = [
-  { symbol: "VOO", shares: 0.0276222, avgCost: 651.65, exchange: "US" },
-  { symbol: "NVDA", shares: 0.0620563, avgCost: 200.4630, exchange: "US" },
-  { symbol: "GOOG", shares: 0.0300009, avgCost: 341.6560, exchange: "US" }
-];
+const INITIAL_PORTFOLIO = [];
+
 const BUDGETS = [
   { cat: "food", limit: 5000 },
   { cat: "transport", limit: 2000 },
@@ -812,4 +811,3 @@ export default function App() {
     </>
   );
 }
-
