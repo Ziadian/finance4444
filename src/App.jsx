@@ -102,7 +102,7 @@ const styles = `
   .login-btn-styled:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(61, 139, 255, 0.4); }
 
   /* =========================================
-     MAIN APP STYLES (ต้นฉบับ 100%)
+     MAIN APP STYLES
      ========================================= */
   .topnav {
     display: flex; align-items: center; justify-content: space-between;
@@ -386,6 +386,7 @@ function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices, exchangeRat
   const bankBalance = txs.reduce((sum, t) => sum + t.amount, 0);
   const debt = 0;
   
+  // ใช้ค่าเงินบาทแบบ Dynamic จาก Firebase
   const portValueTHB = portValue * exchangeRate;
   const netWorth = bankBalance + portValueTHB - debt;
   
@@ -458,24 +459,30 @@ function TransactionsTab({ txs, setTxs }) {
   const [desc, setDesc] = useState(""); const [amount, setAmount] = useState("");
   const [cat, setCat] = useState("food"); const [type, setType] = useState("var"); const [filter, setFilter] = useState("all");
   
-  // ระบบแก้ไขข้อมูล
+  // 🟢 เพิ่ม State สำหรับเลือกว่าเป็น รับ หรือ จ่าย และ ID ของรายการที่กำลังแก้
+  const [txSign, setTxSign] = useState("-");
   const [editId, setEditId] = useState(null);
 
   function saveTx() {
     if (!desc || !amount) return;
+    
+    // 🟢 แปลงตัวเลขให้ติดลบอัตโนมัติถ้าเลือก "จ่าย (-)"
+    const finalAmt = parseFloat(amount) * (txSign === "-" ? -1 : 1);
+    
     if (editId) {
-      setTxs(prev => prev.map(t => t.id === editId ? { ...t, desc, amount: parseFloat(amount), cat, type } : t));
+      setTxs(prev => prev.map(t => t.id === editId ? { ...t, desc, amount: finalAmt, cat, type } : t));
       setEditId(null);
     } else {
-      const newTx = { id: Date.now(), date: new Date().toISOString().slice(0, 10), desc, amount: parseFloat(amount), cat, type, src: "manual" };
+      const newTx = { id: Date.now(), date: new Date().toISOString().slice(0, 10), desc, amount: finalAmt, cat, type, src: "manual" };
       setTxs(prev => [newTx, ...prev]);
     }
-    setDesc(""); setAmount("");
+    setDesc(""); setAmount(""); setTxSign("-");
   }
 
   function editTx(tx) {
     setDesc(tx.desc);
-    setAmount(tx.amount.toString());
+    setAmount(Math.abs(tx.amount).toString()); // 🟢 ดึงเฉพาะตัวเลขมาโชว์ ไม่มีติดลบ
+    setTxSign(tx.amount >= 0 ? "+" : "-");     // 🟢 เลือก Dropdown ตามของเดิม
     setCat(tx.cat);
     setType(tx.type);
     setEditId(tx.id);
@@ -499,14 +506,23 @@ function TransactionsTab({ txs, setTxs }) {
         <div className="card metric-card" style={{ "--accent": "#3d8bff" }}><div className="card-title">คงเหลือสุทธิ</div><div className="metric-val" style={{ color: totalIn - totalOut > 0 ? "var(--green)" : "var(--red)" }}>฿{fmt(totalIn - totalOut)}</div><div className={`metric-badge ${totalIn - totalOut > 0 ? "badge-green" : "badge-red"}`}>Net Flow</div></div>
       </div>
       
-      {/* ปรับปรุงฟอร์มรองรับโหมดแก้ไข */}
       <div className="card"><div className="card-title" style={{ color: editId ? 'var(--blue)' : 'var(--text3)' }}>{editId ? '✏️ กำลังแก้ไขรายการ' : 'เพิ่มรายการด้วยตนเอง'}</div>
-        <div className="input-row"><input className="inp" placeholder="คำอธิบาย (เช่น ยอดยกมา, เงินเดือน, ค่าอาหาร)" value={desc} onChange={e => setDesc(e.target.value)} style={{ flex: 2 }} /><input className="inp" type="number" placeholder="จำนวนเงิน (+/-)" value={amount} onChange={e => setAmount(e.target.value)} style={{ flex: 1 }} /></div>
+        <div className="input-row">
+          <input className="inp" placeholder="คำอธิบาย (เช่น ค่าอาหาร)" value={desc} onChange={e => setDesc(e.target.value)} style={{ flex: 2 }} />
+          
+          {/* 🟢 Dropdown เลือก รับ/จ่าย แก้บัคแป้นพิมพ์มือถือ */}
+          <select className="inp" value={txSign} onChange={e => setTxSign(e.target.value)} style={{ flex: '0 0 100px', minWidth: '100px' }}>
+            <option value="-">📉 จ่าย (-)</option>
+            <option value="+">📈 รับ (+)</option>
+          </select>
+          
+          <input className="inp" type="number" placeholder="จำนวนเงิน" value={amount} onChange={e => setAmount(e.target.value)} style={{ flex: 1, minWidth: '90px' }} />
+        </div>
         <div className="input-row">
           <select className="inp" value={cat} onChange={e => setCat(e.target.value)}>{Object.entries(CATEGORIES).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}</select>
           <select className="inp" value={type} onChange={e => setType(e.target.value)}><option value="fix">🔒 Fix Cost (คงที่)</option><option value="var">📊 Variable Cost (ผันแปร)</option></select>
           <button className={editId ? "btn btn-blue" : "btn btn-green"} onClick={saveTx}>{editId ? "💾 บันทึกแก้ไข" : "+ เพิ่ม"}</button>
-          {editId && <button className="btn btn-ghost" onClick={() => { setEditId(null); setDesc(""); setAmount(""); }}>❌ ยกเลิก</button>}
+          {editId && <button className="btn btn-ghost" onClick={() => { setEditId(null); setDesc(""); setAmount(""); setTxSign("-"); }}>❌ ยกเลิก</button>}
         </div>
       </div>
       <div className="card">
@@ -590,7 +606,6 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
     if (!symbol || !shares || !cost) return;
     const symUpper = symbol.toUpperCase();
     
-    // โลจิกซื้อเพิ่ม/ถัวเฉลี่ยต้นทุน
     setPortfolio(prev => {
       const existing = prev.find(p => p.symbol === symUpper);
       if (existing) {
@@ -606,7 +621,6 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
     setSymbol(""); setShares(""); setCost("");
   }
 
-  // ระบบลบหุ้น
   function deleteHolding(sym) {
     if(window.confirm(`ต้องการลบหุ้น ${sym} ออกจากพอร์ตใช่หรือไม่?`)) {
       setPortfolio(prev => prev.filter(p => p.symbol !== sym));
@@ -627,7 +641,6 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
         <div className="card metric-card" style={{ "--accent": "#9f7aea" }}><div className="card-title">มูลค่าพอร์ตรวม (THB)</div><div className="metric-val" style={{ fontSize: isLoadingPrices ? "18px" : "26px" }}>{isLoadingPrices ? "กำลังโหลด..." : `฿${fmt(totalVal)}`}</div><div className="metric-sub">{isLoadingPrices ? "รอข้อมูล API..." : "ราคาตลาดปัจจุบัน"}</div></div>
         <div className="card metric-card" style={{ "--accent": totalPnL >= 0 ? "#00d68f" : "#ff4d6a" }}><div className="card-title">กำไร/ขาดทุน (UNREALIZED)</div><div className="metric-val" style={{ color: totalPnL >= 0 && !isLoadingPrices ? "var(--green)" : "var(--red)", fontSize: isLoadingPrices ? "18px" : "26px" }}>{isLoadingPrices ? "กำลังโหลด..." : `${totalPnL >= 0 ? "+" : ""}฿${fmt(totalPnL)}`}</div><div className={`metric-badge ${totalPnL >= 0 ? "badge-green" : "badge-red"}`}>{isLoadingPrices ? "..." : `${totalPnL >= 0 ? "+" : ""}${((totalPnL / (totalCost || 1)) * 100).toFixed(2)}%`}</div></div>
         
-        {/* กล่องกรอกค่าเงินบาทแบบ PRO */}
         <div className="card metric-card" style={{ "--accent": "#f0b429" }}>
           <div className="card-title">USD/THB RATE (DIME!)</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
