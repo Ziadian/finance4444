@@ -102,7 +102,7 @@ const styles = `
   .login-btn-styled:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(61, 139, 255, 0.4); }
 
   /* =========================================
-     MAIN APP STYLES (ต้นฉบับ 100%)
+     MAIN APP STYLES
      ========================================= */
   .topnav {
     display: flex; align-items: center; justify-content: space-between;
@@ -244,6 +244,14 @@ const styles = `
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
   ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  
+  /* Input ค่าเงิน */
+  .exchange-input {
+    background: transparent; border: none; border-bottom: 1px dashed var(--text2);
+    color: var(--text); font-size: 26px; font-weight: 700; font-family: var(--font-mono);
+    width: 100px; outline: none; text-align: left;
+  }
+  .exchange-input:focus { border-bottom-color: var(--blue); color: var(--blue); }
 `;
 
 // ============================================================
@@ -331,7 +339,7 @@ function guessCategory(text) {
 function fmt(n, dec = 0) { return (n||0).toLocaleString("th-TH", { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
 
 // ============================================================
-// MINI COMPONENTS (ต้นฉบับ 100%)
+// MINI COMPONENTS
 // ============================================================
 function DonutChart({ data, size = 140 }) {
   const total = data.reduce((s, d) => s + d.value, 0);
@@ -360,9 +368,9 @@ function MiniBarChart({ values, color = "#3d8bff", height = 50 }) {
 }
 
 // ============================================================
-// TABS CONTENT (แก้ไขเฉพาะรับส่งผ่าน Firebase & เพิ่มถัวเฉลี่ยหุ้น)
+// TABS CONTENT
 // ============================================================
-function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices }) {
+function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices, exchangeRate }) {
   const thisMonth = txs.filter(t => t.date.startsWith(new Date().toISOString().slice(0, 7)));
   const income = thisMonth.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
   const expense = thisMonth.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
@@ -373,9 +381,11 @@ function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices }) {
   const portPnL = portValue - portCost;
   const bankBalance = txs.reduce((sum, t) => sum + t.amount, 0);
   const debt = 0;
-  const USD_THB = 32.54;
-  const portValueTHB = portValue * USD_THB;
+  
+  // ใช้ค่าเงินบาทแบบ Dynamic จาก Firebase
+  const portValueTHB = portValue * exchangeRate;
   const netWorth = bankBalance + portValueTHB - debt;
+  
   const allocData = [ { label: "เงินฝาก", value: Math.max(bankBalance, 0), color: "#3d8bff" }, { label: "หุ้น US", value: portValueTHB, color: "#00d68f" }, { label: "หนี้สิน", value: debt, color: "#ff4d6a" } ].filter(d => d.value > 0);
   const monthlyExpenses = [0, 0, 0, 0, expense];
 
@@ -484,7 +494,7 @@ function TransactionsTab({ txs, setTxs }) {
   );
 }
 
-function SmsParserTab({ setTxs, portfolio, setPortfolio }) {
+function SmsParserTab({ setTxs, portfolio, setPortfolio, exchangeRate }) {
   const [sms, setSms] = useState(""); const [result, setResult] = useState(null); const [added, setAdded] = useState(false);
   const examples = [`MAKE: เงินเข้า 10,000 บาท`, `MAKE: ซื้อหุ้น NVDA 5 หุ้น 20,000 บาท`, `MAKE: จ่าย Netflix 419.00 บาท วันที่ 02/05/67`];
   function parse() { const r = parseMakeSMS(sms); setResult(r); setAdded(false); }
@@ -495,7 +505,8 @@ function SmsParserTab({ setTxs, portfolio, setPortfolio }) {
 
     if (result.cat === "invest" && result.symbol) {
       setPortfolio(prev => {
-        const existing = prev.find(p => p.symbol === result.symbol); const sharesToAdd = result.shares || 1; const USD_THB = 32.54; const costUSD = result.amount / USD_THB;
+        const existing = prev.find(p => p.symbol === result.symbol); const sharesToAdd = result.shares || 1; 
+        const costUSD = result.amount / exchangeRate; // ใช้ค่าเงินบาทแบบ Dynamic
         if (existing) {
           const totalCost = (existing.avgCost * existing.shares) + costUSD; const newShares = existing.shares + sharesToAdd; const newAvgCost = totalCost / newShares;
           return prev.map(p => p.symbol === result.symbol ? { ...p, shares: newShares, avgCost: newAvgCost } : p);
@@ -530,9 +541,8 @@ function SmsParserTab({ setTxs, portfolio, setPortfolio }) {
   );
 }
 
-function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices }) {
+function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, exchangeRate, setExchangeRate }) {
   const [symbol, setSymbol] = useState(""); const [shares, setShares] = useState(""); const [cost, setCost] = useState(""); const [exch, setExch] = useState("US");
-  const USD_THB = 32.54;
   
   function addHolding() {
     if (!symbol || !shares || !cost) return;
@@ -556,7 +566,7 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices }) 
 
   const rows = portfolio.map(p => {
     const px = livePrices[p.symbol]; const currentPrice = px?.price || p.avgCost; const isCrypto = p.exchange === "CRYPTO";
-    const mktVal = currentPrice * p.shares * (isCrypto ? 1 : USD_THB); const costVal = p.avgCost * p.shares * (isCrypto ? 1 : USD_THB);
+    const mktVal = currentPrice * p.shares * (isCrypto ? 1 : exchangeRate); const costVal = p.avgCost * p.shares * (isCrypto ? 1 : exchangeRate);
     const pnl = mktVal - costVal; const pnlPct = (pnl / (costVal || 1)) * 100; const change = px?.change || 0; const changePct = px?.pct || 0;
     return { ...p, currentPrice, mktVal, costVal, pnl, pnlPct, change, changePct };
   });
@@ -567,7 +577,22 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices }) 
       <div className="grid-3">
         <div className="card metric-card" style={{ "--accent": "#9f7aea" }}><div className="card-title">มูลค่าพอร์ตรวม (THB)</div><div className="metric-val" style={{ fontSize: isLoadingPrices ? "18px" : "26px" }}>{isLoadingPrices ? "กำลังโหลด..." : `฿${fmt(totalVal)}`}</div><div className="metric-sub">{isLoadingPrices ? "รอข้อมูล API..." : "ราคาตลาดปัจจุบัน"}</div></div>
         <div className="card metric-card" style={{ "--accent": totalPnL >= 0 ? "#00d68f" : "#ff4d6a" }}><div className="card-title">กำไร/ขาดทุน (UNREALIZED)</div><div className="metric-val" style={{ color: totalPnL >= 0 && !isLoadingPrices ? "var(--green)" : "var(--red)", fontSize: isLoadingPrices ? "18px" : "26px" }}>{isLoadingPrices ? "กำลังโหลด..." : `${totalPnL >= 0 ? "+" : ""}฿${fmt(totalPnL)}`}</div><div className={`metric-badge ${totalPnL >= 0 ? "badge-green" : "badge-red"}`}>{isLoadingPrices ? "..." : `${totalPnL >= 0 ? "+" : ""}${((totalPnL / (totalCost || 1)) * 100).toFixed(2)}%`}</div></div>
-        <div className="card metric-card" style={{ "--accent": "#f0b429" }}><div className="card-title">USD/THB Rate</div><div className="metric-val">฿{USD_THB}</div><div className="metric-sub">อัตราแลกเปลี่ยนที่ใช้</div></div>
+        
+        {/* กล่องกรอกค่าเงินบาทแบบ PRO */}
+        <div className="card metric-card" style={{ "--accent": "#f0b429" }}>
+          <div className="card-title">USD/THB RATE (DIME!)</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+            <span style={{ fontSize: '26px', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>฿</span>
+            <input
+              type="number"
+              step="0.01"
+              value={exchangeRate}
+              onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 0)}
+              className="exchange-input"
+            />
+          </div>
+          <div className="metric-sub">พิมพ์แก้เรตตรงนี้ได้เลย (Auto-Sync)</div>
+        </div>
       </div>
       <div className="card"><div className="card-title">ราคาตลาด (REAL-TIME VIA FINNHUB) {isLoadingPrices && "⏳ กำลังอัปเดต..."}</div>
         <div className="grid-3">
@@ -665,6 +690,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [txs, setTxs] = useState([]);
   const [portfolio, setPortfolio] = useState([]);
+  
+  // เพิ่ม State สำหรับจัดการค่าเงินบาท (เริ่มต้น 32.54)
+  const [exchangeRate, setExchangeRate] = useState(32.54);
   const [loading, setLoading] = useState(true);
 
   const [livePrices, setLivePrices] = useState({ ...MOCK_PRICES, ...MOCK_CRYPTO });
@@ -679,8 +707,10 @@ export default function App() {
         const data = res.data();
         setTxs(data.txs || []);
         setPortfolio(data.portfolio || []);
+        // ดึงค่าเงินที่เซฟไว้ ถ้าไม่มีให้ใช้ 32.54
+        setExchangeRate(data.exchangeRate || 32.54);
       } else {
-        const initial = { txs: INITIAL_TXS, portfolio: INITIAL_PORTFOLIO };
+        const initial = { txs: INITIAL_TXS, portfolio: INITIAL_PORTFOLIO, exchangeRate: 32.54 };
         setDoc(doc(db, "users", user), initial);
       }
       setLoading(false);
@@ -727,6 +757,12 @@ export default function App() {
       if (user) setDoc(doc(db, "users", user), { portfolio: next }, { merge: true });
       return next;
     });
+  };
+
+  // ฟังก์ชันบันทึกค่าเงินบาทลง Cloud
+  const handleSetExchangeRate = (val) => {
+    setExchangeRate(val);
+    if (user) setDoc(doc(db, "users", user), { exchangeRate: val }, { merge: true });
   };
 
   // จัดการล็อกอิน
@@ -799,10 +835,10 @@ export default function App() {
             </div>
           ) : (
             <>
-              {activeTab === "dashboard" && <DashboardTab txs={txs} portfolio={portfolio} livePrices={livePrices} isLoadingPrices={isLoadingPrices} />}
+              {activeTab === "dashboard" && <DashboardTab txs={txs} portfolio={portfolio} livePrices={livePrices} isLoadingPrices={isLoadingPrices} exchangeRate={exchangeRate} />}
               {activeTab === "transactions" && <TransactionsTab txs={txs} setTxs={handleSetTxs} />}
-              {activeTab === "sms" && <SmsParserTab setTxs={handleSetTxs} portfolio={portfolio} setPortfolio={handleSetPortfolio} />}
-              {activeTab === "portfolio" && <PortfolioTab portfolio={portfolio} setPortfolio={handleSetPortfolio} livePrices={livePrices} isLoadingPrices={isLoadingPrices} />}
+              {activeTab === "sms" && <SmsParserTab setTxs={handleSetTxs} portfolio={portfolio} setPortfolio={handleSetPortfolio} exchangeRate={exchangeRate} />}
+              {activeTab === "portfolio" && <PortfolioTab portfolio={portfolio} setPortfolio={handleSetPortfolio} livePrices={livePrices} isLoadingPrices={isLoadingPrices} exchangeRate={exchangeRate} setExchangeRate={handleSetExchangeRate} />}
               {activeTab === "budget" && <BudgetTab txs={txs} />}
             </>
           )}
