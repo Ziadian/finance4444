@@ -591,7 +591,7 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
               className="exchange-input"
             />
           </div>
-          <div className="metric-sub">พิมพ์แก้เรตตรงนี้ได้เลย (Auto-Sync)</div>
+          <div className="metric-sub">แก้ค่าเงินปัจจุบัน (Auto-Sync)</div>
         </div>
       </div>
       <div className="card"><div className="card-title">ราคาตลาด (REAL-TIME VIA FINNHUB) {isLoadingPrices && "⏳ กำลังอัปเดต..."}</div>
@@ -785,8 +785,8 @@ export default function App() {
         <div className="login-glow-2" />
         <div className="login-glass-card">
           <div className="login-logo">Th</div>
-          <h2 style={{fontSize:'26px', color:'#fff', fontWeight:700, marginBottom:'8px'}}>Threewit OS</h2>
-          <p style={{fontSize:'13px', color:'var(--text2)', marginBottom:'32px', fontFamily:'var(--font-mono)'}}>Personal Finance Engine</p>
+          <h2 style={{fontSize:'26px', color:'#fff', fontWeight:700, marginBottom:'8px'}}>Threewit X Financial</h2>
+          <p style={{fontSize:'13px', color:'var(--text2)', marginBottom:'32px', fontFamily:'var(--font-mono)'}}>Welcome to Finance Engine!!!</p>
           <form onSubmit={handleLogin}>
             <input className="login-inp-styled" placeholder="Username" onChange={e => setUsernameInput(e.target.value)} />
             <input className="login-inp-styled" type="password" placeholder="Password" onChange={e => setPasswordInput(e.target.value)} />
@@ -807,12 +807,12 @@ export default function App() {
           <div className="topnav-brand">
             <div className="topnav-logo">Th</div>
             <div>
-              <div className="topnav-title">Threewit OS</div>
-              <div className="topnav-sub">Personal Finance Engine</div>
+              <div className="topnav-title">Threewit Kub💸💹</div>
+              <div className="topnav-sub">Finance Engine</div>
             </div>
           </div>
           <div style={{display:'flex', gap:'12px', alignItems:'center'}}>
-            <div className="topnav-sync"><div className="sync-dot" /> Cloud Sync Active</div>
+            <div className="topnav-sync"><div className="sync-dot" />  Active</div>
             <button className="logout-btn" onClick={() => { localStorage.removeItem("tw_user"); setUser(null); }}>Log Out</button>
           </div>
         </nav>
