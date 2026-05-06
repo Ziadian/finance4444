@@ -730,8 +730,8 @@ function MiniBarChart({ values, color = "#4b8fff", height = 50 }) {
 // ============================================================
 function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices, exchangeRate }) {
   const thisMonth = txs.filter(t => t.date.startsWith(new Date().toISOString().slice(0, 7)));
-  const income = thisMonth.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
-  const expense = thisMonth.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
+  const income = txs.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+  const expense = txs.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
   const saving = income - expense;
   const savingRate = income > 0 ? (saving / income) * 100 : 0;
   const portValue = portfolio.reduce((s, p) => { const px = livePrices[p.symbol]?.price || p.avgCost; return s + px * p.shares; }, 0);
@@ -1636,3 +1636,4 @@ export default function App() {
     </>
   );
 }
+
