@@ -1198,25 +1198,60 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
           <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>USD/THB RATE</span>
                         {/* 🔄 ปุ่มกดบังคับดึงเรทเงินเองทันที */}
-            <button 
-              onClick={async (e) => {
-                const btn = e.currentTarget;
-                btn.style.opacity = "0.5";
-                btn.innerText = "⏳";
-                try {
-                  const res = await fetch("https://open.er-api.com/v6/latest/USD");
-                  const data = await res.json();
-                  if (data?.rates?.THB) setExchangeRate(data.rates.THB);
-                } catch(err) {
-                  console.error(err);
-                }
-                setTimeout(() => { btn.style.opacity = "1"; btn.innerText = "🔄"; }, 500);
-              }} 
-              style={{ background: "none", border: "none", cursor: "pointer", fontSize: "12px", filter: "grayscale(100%) brightness(200%)" }}
-              title="ดึงเรทล่าสุดเดี๋ยวนี้"
-            >
-              🔄
-            </button>
+<button 
+  onClick={async (e) => {
+    const btn = e.currentTarget;
+
+    btn.style.opacity = "0.5";
+    btn.innerText = "⏳";
+
+    try {
+      // ✅ realtime exchange API
+      const res = await fetch("https://open.er-api.com/v6/latest/USD");
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      // ✅ ตรวจ response ให้ปลอดภัยขึ้น
+      if (
+        data &&
+        data.result === "success" &&
+        data.rates &&
+        typeof data.rates.THB === "number"
+      ) {
+        const liveRate = parseFloat(data.rates.THB);
+
+        if (!isNaN(liveRate)) {
+          setExchangeRate(liveRate);
+
+          console.log("✅ อัปเดตเรทล่าสุด:", liveRate);
+        }
+      } else {
+        console.error("❌ API response ไม่ถูกต้อง", data);
+      }
+    } catch (err) {
+      console.error("❌ ดึงเรทไม่สำเร็จ:", err);
+    }
+
+    setTimeout(() => {
+      btn.style.opacity = "1";
+      btn.innerText = "🔄";
+    }, 500);
+  }} 
+  style={{ 
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "12px",
+    filter: "grayscale(100%) brightness(200%)"
+  }}
+  title="ดึงเรทล่าสุดเดี๋ยวนี้"
+>
+  🔄
+</button>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "4px" }}>
             <span style={{ fontSize: "26px", fontWeight: 700, fontFamily: "var(--font-head)", color: "var(--gold)" }}>฿</span>
@@ -1455,40 +1490,74 @@ export default function App() {
     return () => unsub();
   }, [user]);
 
-    // 🌐 ระบบดึงเรทเงินอัจฉริยะ (ใช้ API ฟรีที่เสถียรที่สุด)
-  useEffect(() => {
-    let lastFetchTime = 0;
-    const FRESHNESS_LIMIT = 15 * 60 * 1000; // 15 นาที
+    // 🌐 ระบบดึงเรทเงินอัจฉริยะ
+useEffect(() => {
+  let lastFetchTime = 0;
+  const FRESHNESS_LIMIT = 5 * 60 * 1000; // 5 นาที (ให้ตรงกับ API update)
 
-    async function fetchLiveExchangeRate() {
-      const now = Date.now();
-      if (now - lastFetchTime < FRESHNESS_LIMIT && lastFetchTime !== 0) return;
+  async function fetchLiveExchangeRate() {
+    const now = Date.now();
+    if (now - lastFetchTime < FRESHNESS_LIMIT && lastFetchTime !== 0) return;
 
-      if (!user) return;
-      try {
-        const res = await fetch("https://open.er-api.com/v6/latest/USD");
-        const data = await res.json();
-        
-        if (data && data.rates && data.rates.THB) {
-          const liveRate = parseFloat(data.rates.THB);
-          setExchangeRate(liveRate);
-          setDoc(doc(db, "users", user), { exchangeRate: liveRate }, { merge: true });
-          lastFetchTime = Date.now();
-        }
-      } catch (err) {
-        console.error("ดึงค่าเงินอัตโนมัติไม่สำเร็จ:", err);
+    if (!user) return;
+
+    try {
+      // ✅ ใช้ API realtime กว่าเดิม
+      const res = await fetch("https://open.er-api.com/v6/latest/USD");
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
       }
+
+      const data = await res.json();
+
+      // ✅ เช็ค response ให้ปลอดภัยขึ้น
+      if (
+        data &&
+        data.result === "success" &&
+        data.rates &&
+        typeof data.rates.THB === "number"
+      ) {
+        const liveRate = parseFloat(data.rates.THB);
+
+        // กัน NaN
+        if (!isNaN(liveRate)) {
+          setExchangeRate(liveRate);
+
+          await setDoc(
+            doc(db, "users", user),
+            { 
+              exchangeRate: liveRate,
+              exchangeUpdatedAt: new Date().toISOString()
+            },
+            { merge: true }
+          );
+
+          lastFetchTime = Date.now();
+
+          console.log("✅ อัปเดตค่าเงินล่าสุด:", liveRate);
+        }
+      } else {
+        console.error("❌ รูปแบบข้อมูล API ไม่ถูกต้อง", data);
+      }
+    } catch (err) {
+      console.error("❌ ดึงค่าเงินอัตโนมัติไม่สำเร็จ:", err);
     }
+  }
 
-    fetchLiveExchangeRate();
-    window.addEventListener('focus', fetchLiveExchangeRate);
-    const interval = setInterval(fetchLiveExchangeRate, 1800000); // สำรองทุก 30 นาที
+  fetchLiveExchangeRate();
 
-    return () => {
-      window.removeEventListener('focus', fetchLiveExchangeRate);
-      clearInterval(interval);
-    };
-  }, [user]);
+  // รีเฟรชตอนกลับมาโฟกัสหน้าเว็บ
+  window.addEventListener("focus", fetchLiveExchangeRate);
+
+  // สำรองรีเฟรชทุก 10 นาที
+  const interval = setInterval(fetchLiveExchangeRate, 10 * 60 * 1000);
+
+  return () => {
+    window.removeEventListener("focus", fetchLiveExchangeRate);
+    clearInterval(interval);
+  };
+}, [user]);
 
 
   // 📈 ระบบดึงราคาหุ้นตามพอร์ตจริง (ดึงเปอร์เซ็นต์ % มาให้ครบ)
@@ -1627,4 +1696,5 @@ export default function App() {
     </>
   );
 }
+
 
