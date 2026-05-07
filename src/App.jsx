@@ -1496,7 +1496,7 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     const API_KEY = "d7sandpr01qorsvi1jagd7sandpr01qorsvi1jb0";
-    const symbolsToFetch = ["VOO", "NVDA", "GOOG","META","TSLA","MSFT",];
+    const symbolsToFetch = ["VOO", "NVDA", "GOOG", "META", "TSLA", "MSFT"];
     Promise.all(symbolsToFetch.map(sym =>
       fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${API_KEY}`)
         .then(r => r.json())
