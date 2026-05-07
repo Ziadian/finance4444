@@ -1496,7 +1496,7 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     const API_KEY = "d7sandpr01qorsvi1jagd7sandpr01qorsvi1jb0";
-    const symbolsToFetch = ["VOO", "NVDA", "GOOG"];
+    const symbolsToFetch = ["VOO", "NVDA", "GOOG","META","TSLA","MSFT",];
     Promise.all(symbolsToFetch.map(sym =>
       fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${API_KEY}`)
         .then(r => r.json())
@@ -1509,30 +1509,6 @@ export default function App() {
       setIsLoadingPrices(false);
     });
   }, [user, portfolio]);
-
-
-  useEffect(() => {
-    if (!user) return;
-    const API_KEY = "d7sandpr01qorsvi1jagd7sandpr01qorsvi1jb0";
-    const symbolsToFetch = ["VOO", "NVDA", "GOOG"];
-    Promise.all(symbolsToFetch.map(sym =>
-      fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${API_KEY}`)
-        .then(res => res.json())
-        .then(data => ({ symbol: sym, price: data.c, change: data.d, pct: data.dp }))
-        .catch(() => null)
-    )).then(results => {
-      setLivePrices(prevPrices => {
-        const newPrices = { ...prevPrices };
-        results.forEach(item => {
-          if (item && item.price) {
-            newPrices[item.symbol] = { ...newPrices[item.symbol], price: item.price, change: item.change, pct: item.pct };
-          }
-        });
-        return newPrices;
-      });
-      setIsLoadingPrices(false);
-    });
-  }, [user]);
 
   const handleSetTxs = (action) => {
     setTxs(prev => {
