@@ -1226,9 +1226,10 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
       </div>
 
       <div className="card">
+              <div className="card">
         <div className="card-title">ราคาตลาด REAL-TIME · FINNHUB {isLoadingPrices && "⏳ กำลังอัปเดต..."}</div>
         <div className="grid-3">
-          {/* เปลี่ยนจากล็อกชื่อ 3 ตัว เป็นดึงตามหุ้นที่มีในพอร์ต (ไม่ซ้ำตัว) */}
+          {/* 🟢 ใช้โค้ดบรรทัดนี้ดึงหุ้นตามพอร์ต (ห้ามใช้คำว่า uniqueSymbols เด็ดขาด) */}
           {[...new Set(portfolio.filter(p => p.exchange !== "CRYPTO").map(p => p.symbol))].map(sym => {
             const d = livePrices[sym];
             if (!d) return null;
@@ -1260,6 +1261,7 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
           })}
         </div>
       </div>
+
 
       <div className="card">
         <div className="section-header">
