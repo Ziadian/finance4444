@@ -734,18 +734,26 @@ function MiniBarChart({ values, color = "#4b8fff", height = 50 }) {
 // TABS CONTENT
 // ============================================================
 function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices, exchangeRate }) {
-  const thisMonth = txs.filter(t => t.date.startsWith(new Date().toISOString().slice(0, 7)));
-  const income = txs.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
-  const expense = txs.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
+  const safeRate = parseFloat(exchangeRate) || 32.54;
+  const thisMonth = txs.filter(t => t.date && t.date.startsWith(new Date().toISOString().slice(0, 7)));
+  
+  const income = txs.filter(t => (parseFloat(t.amount) || 0) > 0).reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
+  const expense = txs.filter(t => (parseFloat(t.amount) || 0) < 0).reduce((s, t) => s + Math.abs(parseFloat(t.amount) || 0), 0);
   const saving = income - expense;
   const savingRate = income > 0 ? (saving / income) * 100 : 0;
-  const portValue = portfolio.reduce((s, p) => { const px = livePrices[p.symbol]?.price || p.avgCost; return s + px * p.shares; }, 0);
-  const portCost = portfolio.reduce((s, p) => s + p.avgCost * p.shares, 0);
+  
+  const portValue = portfolio.reduce((s, p) => { 
+    const px = parseFloat(livePrices[p.symbol]?.price || p.avgCost) || 0; 
+    return s + px * (parseFloat(p.shares) || 0); 
+  }, 0);
+  const portCost = portfolio.reduce((s, p) => s + (parseFloat(p.avgCost) || 0) * (parseFloat(p.shares) || 0), 0);
   const portPnL = portValue - portCost;
-  const bankBalance = txs.reduce((sum, t) => sum + t.amount, 0);
+  
+  const bankBalance = txs.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
   const debt = 0;
-  const portValueTHB = portValue * exchangeRate;
+  const portValueTHB = portValue * safeRate;
   const netWorth = bankBalance + portValueTHB - debt;
+  
   const allocData = [
     { label: "เงินฝาก", value: Math.max(bankBalance, 0), color: "#4b8fff" },
     { label: "หุ้น US",  value: portValueTHB,             color: "#05e29c" },
@@ -761,11 +769,10 @@ function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices, exchangeRat
         </div>
       )}
 
-      {/* TOP METRICS */}
       <div className="grid-4">
         {[
-          { label: "NET WORTH",        val: isLoadingPrices ? "Loading..." : `฿${fmt(netWorth)}`,        sub: "ทรัพย์สินสุทธิ",                                                    badge: "Live",                                                          btype: "badge-green", accent: "#05e29c" },
-          { label: "รายรับเดือนนี้",    val: `฿${fmt(income)}`,                                           sub: "Current Month",                                                    badge: "=",                                                             btype: "badge-blue",  accent: "#4b8fff" },
+          { label: "NET WORTH",        val: isLoadingPrices ? "Loading..." : `฿${fmt(netWorth)}`,        sub: "ทรัพย์สินสุทธิ",                                                    badge: "Live",                                      btype: "badge-green", accent: "#05e29c" },
+          { label: "รายรับเดือนนี้",    val: `฿${fmt(income)}`,                                          sub: "Current Month",                                                    badge: "=",                                            btype: "badge-blue",  accent: "#4b8fff" },
           { label: "รายจ่ายเดือนนี้",   val: `฿${fmt(expense)}`,                                          sub: `${((expense / (income || 1)) * 100).toFixed(0)}% ของรายรับ`,      badge: expense > 30000 ? "เกินงบ" : "ในงบ",                             btype: expense > 30000 ? "badge-red" : "badge-green", accent: expense > 30000 ? "#ff3d6b" : "#05e29c" },
           { label: "มูลค่าพอร์ต (THB)", val: isLoadingPrices ? "Loading..." : `฿${fmt(portValueTHB)}`,  sub: isLoadingPrices ? "" : `P&L: ${portPnL >= 0 ? "+" : ""}$${fmt(portPnL, 2)}`, badge: isLoadingPrices ? "..." : `${portPnL >= 0 ? "+" : ""}${((portPnL / (portCost || 1)) * 100).toFixed(1)}%`, btype: portPnL >= 0 ? "badge-green" : "badge-red", accent: "#a78bfa" },
         ].map((m, i) => (
@@ -779,7 +786,6 @@ function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices, exchangeRat
         ))}
       </div>
 
-      {/* CHARTS */}
       <div className="grid-2">
         <div className="card">
           <div className="card-title">การจัดสรรสินทรัพย์ {isLoadingPrices && "⏳"}</div>
@@ -813,7 +819,6 @@ function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices, exchangeRat
         </div>
       </div>
 
-      {/* NET WORTH TABLE */}
       <div className="card">
         <div className="card-title">ภาพรวมการเงินทั้งหมด</div>
         <div style={{ overflowX: "auto" }}>
@@ -852,7 +857,6 @@ function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices, exchangeRat
         </div>
       </div>
 
-      {/* RECENT TRANSACTIONS */}
       <div className="card">
         <div className="section-header">
           <span className="section-title">รายการล่าสุด</span>
@@ -900,7 +904,8 @@ function TransactionsTab({ txs, setTxs }) {
 
   function saveTx() {
     if (!desc || !amount) return;
-    const finalAmt = parseFloat(amount) * (txSign === "-" ? -1 : 1);
+    const cleanAmt = parseFloat(amount.toString().replace(/[^0-9.]/g, '')) || 0;
+    const finalAmt = cleanAmt * (txSign === "-" ? -1 : 1);
     if (editId) {
       setTxs(prev => prev.map(t => t.id === editId ? { ...t, desc, amount: finalAmt, cat, type } : t));
       setEditId(null);
@@ -928,12 +933,11 @@ function TransactionsTab({ txs, setTxs }) {
   }
 
   const filtered = filter === "all" ? txs : filter === "income" ? txs.filter(t => t.amount > 0) : txs.filter(t => t.amount < 0);
-  const totalIn  = txs.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
-  const totalOut = txs.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
+  const totalIn  = txs.filter(t => t.amount > 0).reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
+  const totalOut = txs.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(parseFloat(t.amount) || 0), 0);
 
   return (
     <div className="gap-16">
-      {/* SUMMARY */}
       <div className="grid-3">
         <div className="card metric-card" style={{ "--accent": "#05e29c" }}>
           <div className="card-glow" />
@@ -957,7 +961,6 @@ function TransactionsTab({ txs, setTxs }) {
         </div>
       </div>
 
-      {/* FORM */}
       <div className="card">
         <div className="card-title" style={{ color: editId ? "var(--blue)" : undefined }}>
           {editId ? "✏️ กำลังแก้ไขรายการ" : "เพิ่มรายการด้วยตนเอง"}
@@ -989,7 +992,6 @@ function TransactionsTab({ txs, setTxs }) {
         </div>
       </div>
 
-      {/* TABLE */}
       <div className="card">
         <div className="section-header">
           <span className="section-title">ประวัติรายการ ({filtered.length})</span>
@@ -1056,7 +1058,6 @@ function SmsParserTab({ setTxs, portfolio, setPortfolio, exchangeRate }) {
     `MAKE: ซื้อหุ้น NVDA 5 หุ้น 20,000 บาท`,
     `MAKE: จ่าย Netflix 419.00 บาท วันที่ 02/05/67`,
   ];
-
   function parse() { const r = parseMakeSMS(sms); setResult(r); setAdded(false); }
 
   function addToLedger() {
@@ -1071,11 +1072,11 @@ function SmsParserTab({ setTxs, portfolio, setPortfolio, exchangeRate }) {
     if (result.cat === "invest" && result.symbol) {
       setPortfolio(prev => {
         const existing = prev.find(p => p.symbol === result.symbol);
-        const sharesToAdd = result.shares || 1;
-        const costUSD = result.amount / exchangeRate;
+        const sharesToAdd = parseFloat(result.shares) || 1;
+        const costUSD = (parseFloat(result.amount) || 0) / (parseFloat(exchangeRate) || 32.54);
         if (existing) {
-          const totalCost = (existing.avgCost * existing.shares) + costUSD;
-          const newShares = existing.shares + sharesToAdd;
+          const totalCost = (parseFloat(existing.avgCost) * parseFloat(existing.shares)) + costUSD;
+          const newShares = parseFloat(existing.shares) + sharesToAdd;
           const newAvgCost = totalCost / newShares;
           return prev.map(p => p.symbol === result.symbol ? { ...p, shares: newShares, avgCost: newAvgCost } : p);
         } else {
@@ -1088,10 +1089,7 @@ function SmsParserTab({ setTxs, portfolio, setPortfolio, exchangeRate }) {
 
   return (
     <div className="gap-16">
-      <div className="alert alert-info">
-        💡 คัดลอก SMS / Notification จาก MAKE หรือแอปเทรดมาวาง แล้วกด Parse ระบบจะดึงข้อมูลอัตโนมัติ
-      </div>
-
+      <div className="alert alert-info">💡 คัดลอก SMS / Notification จาก MAKE หรือแอปเทรดมาวาง แล้วกด Parse ระบบจะดึงข้อมูลอัตโนมัติ</div>
       <div className="card">
         <div className="card-title">ตัวอย่าง SMS Format ที่รองรับ</div>
         {examples.map((e, i) => (
@@ -1099,20 +1097,13 @@ function SmsParserTab({ setTxs, portfolio, setPortfolio, exchangeRate }) {
         ))}
         <div style={{ fontSize: 11, color: "var(--text3)", fontFamily: "var(--font-mono)", marginTop: 8 }}>คลิกที่ตัวอย่างเพื่อโหลดข้อความ</div>
       </div>
-
       <div className="card">
         <div className="card-title">วาง SMS / Notification ที่นี่</div>
-        <textarea
-          className="sms-box"
-          placeholder="วาง SMS จาก MAKE by KBank ที่นี่..."
-          value={sms}
-          onChange={e => { setSms(e.target.value); setResult(null); }}
-        />
+        <textarea className="sms-box" placeholder="วาง SMS จาก MAKE by KBank ที่นี่..." value={sms} onChange={e => { setSms(e.target.value); setResult(null); }} />
         <div className="row mt-12">
           <button className="btn btn-blue" onClick={parse}>🔍 Parse SMS</button>
           <button className="btn btn-ghost" onClick={() => { setSms(""); setResult(null); }}>ล้าง</button>
         </div>
-
         {result && (
           <div className="parse-result mt-16">
             {result.valid ? (
@@ -1126,21 +1117,14 @@ function SmsParserTab({ setTxs, portfolio, setPortfolio, exchangeRate }) {
                   ["MERCHANT", result.merchant],
                   ["CATEGORY", `${CATEGORIES[result.cat]?.icon} ${CATEGORIES[result.cat]?.label}`],
                 ].map(([k, v]) => (
-                  <div key={k} className="parse-row">
-                    <span className="parse-key">{k}</span>
-                    <span className="parse-val">{v}</span>
-                  </div>
+                  <div key={k} className="parse-row"><span className="parse-key">{k}</span><span className="parse-val">{v}</span></div>
                 ))}
                 <div className="row mt-12">
-                  <button className="btn btn-green" onClick={addToLedger} disabled={added}>
-                    {added ? "✅ เพิ่มแล้ว" : "+ บันทึกลงบัญชี"}
-                  </button>
+                  <button className="btn btn-green" onClick={addToLedger} disabled={added}>{added ? "✅ เพิ่มแล้ว" : "+ บันทึกลงบัญชี"}</button>
                 </div>
               </>
             ) : (
-              <div style={{ color: "var(--red)", fontSize: 13, fontFamily: "var(--font-mono)" }}>
-                ❌ ไม่พบข้อมูลที่ Parse ได้ — ลองตรวจสอบรูปแบบ SMS
-              </div>
+              <div style={{ color: "var(--red)", fontSize: 13, fontFamily: "var(--font-mono)" }}>❌ ไม่พบข้อมูลที่ Parse ได้ — ลองตรวจสอบรูปแบบ SMS</div>
             )}
           </div>
         )}
@@ -1154,14 +1138,12 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
   const [shares, setShares] = useState("");
   const [cost, setCost] = useState("");
   const [exch, setExch] = useState("US");
+  const safeRate = parseFloat(exchangeRate) || 32.54;
 
-    
+  function addHolding() {
     if (!symbol || !shares || !cost) return;
-    
-    // ล้างตัวอักษรที่พิมพ์ผิดมา (เช่น THB) ให้เหลือแต่ตัวเลข
     const cleanShares = shares.toString().replace(/[^0-9.]/g, '');
     const cleanCost = cost.toString().replace(/[^0-9.]/g, '');
-    
     const numShares = parseFloat(cleanShares);
     const numCost = parseFloat(cleanCost);
 
@@ -1186,7 +1168,6 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
     setSymbol(""); setShares(""); setCost("");
   }
 
-
   function deleteHolding(sym) {
     if (window.confirm(`ต้องการลบหุ้น ${sym} ออกจากพอร์ตใช่หรือไม่?`)) {
       setPortfolio(prev => prev.filter(p => p.symbol !== sym));
@@ -1195,28 +1176,28 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
 
   const rows = portfolio.map(p => {
     const px = livePrices[p.symbol];
-    const currentPrice = px?.price || p.avgCost;
+    const currentPrice = parseFloat(px?.price || p.avgCost) || 0;
     const isCrypto = p.exchange === "CRYPTO";
-    const mktVal  = currentPrice * p.shares * (isCrypto ? 1 : exchangeRate);
-    const costVal = p.avgCost   * p.shares * (isCrypto ? 1 : exchangeRate);
+    const sh = parseFloat(p.shares) || 0;
+    const avgC = parseFloat(p.avgCost) || 0;
+    const mktVal  = currentPrice * sh * (isCrypto ? 1 : safeRate);
+    const costVal = avgC * sh * (isCrypto ? 1 : safeRate);
     const pnl     = mktVal - costVal;
-    const pnlPct  = (pnl / (costVal || 1)) * 100;
-    return { ...p, currentPrice, mktVal, costVal, pnl, pnlPct };
+    const pnlPct  = costVal !== 0 ? (pnl / costVal) * 100 : 0;
+    return { ...p, currentPrice, mktVal, costVal, pnl, pnlPct, change: parseFloat(px?.change) || 0, pct: parseFloat(px?.pct) || 0 };
   });
-  const totalVal  = rows.reduce((s, r) => s + r.mktVal, 0);
-  const totalCost = rows.reduce((s, r) => s + r.costVal, 0);
+
+  const totalVal  = rows.reduce((s, r) => s + (parseFloat(r.mktVal) || 0), 0);
+  const totalCost = rows.reduce((s, r) => s + (parseFloat(r.costVal) || 0), 0);
   const totalPnL  = totalVal - totalCost;
 
   return (
     <div className="gap-16">
-      {/* SUMMARY */}
       <div className="grid-3">
         <div className="card metric-card" style={{ "--accent": "#a78bfa" }}>
           <div className="card-glow" />
           <div className="card-title">มูลค่าพอร์ตรวม (THB)</div>
-          <div className="metric-val" style={{ fontSize: isLoadingPrices ? "18px" : undefined }}>
-            {isLoadingPrices ? "กำลังโหลด..." : `฿${fmt(totalVal)}`}
-          </div>
+          <div className="metric-val" style={{ fontSize: isLoadingPrices ? "18px" : undefined }}>{isLoadingPrices ? "กำลังโหลด..." : `฿${fmt(totalVal)}`}</div>
           <div className="metric-sub">{isLoadingPrices ? "รอข้อมูล API..." : "ราคาตลาดปัจจุบัน"}</div>
         </div>
         <div className="card metric-card" style={{ "--accent": totalPnL >= 0 ? "#05e29c" : "#ff3d6b" }}>
@@ -1234,30 +1215,22 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
           <div className="card-title">USD / THB RATE (DIME!)</div>
           <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "4px" }}>
             <span style={{ fontSize: "26px", fontWeight: 700, fontFamily: "var(--font-head)", color: "var(--gold)" }}>฿</span>
-            <input
-              type="number" step="0.01"
-              value={exchangeRate}
-              onChange={e => setExchangeRate(parseFloat(e.target.value) || 0)}
-              className="exchange-input"
-            />
+            <input type="number" step="0.01" value={exchangeRate} onChange={e => setExchangeRate(parseFloat(e.target.value) || 0)} className="exchange-input" />
           </div>
           <div className="metric-sub">แก้ค่าเงินปัจจุบัน (Auto-Sync)</div>
         </div>
       </div>
 
-      {/* LIVE PRICES */}
       <div className="card">
         <div className="card-title">ราคาตลาด REAL-TIME · FINNHUB {isLoadingPrices && "⏳ กำลังอัปเดต..."}</div>
         <div className="grid-3">
           {["VOO", "NVDA", "GOOG"].map(sym => {
             const d = livePrices[sym];
             if (!d) return null;
+            const pct = parseFloat(d.pct) || 0;
+            const change = parseFloat(d.change) || 0;
             return (
-              <div key={sym} style={{
-                padding: "16px", borderRadius: "12px",
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid var(--border)",
-              }}>
+              <div key={sym} style={{ padding: "16px", borderRadius: "12px", background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
                 <div className="ticker-card">
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div>
@@ -1265,15 +1238,15 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
                       <div className="ticker-name">{d.name}</div>
                     </div>
                     {!isLoadingPrices && (
-                      <div className={`metric-badge ${d.change >= 0 ? "badge-green" : "badge-red"}`} style={{ marginTop: 0 }}>
-                        {d.pct >= 0 ? "+" : ""}{d.pct?.toFixed(2)}%
+                      <div className={`metric-badge ${change >= 0 ? "badge-green" : "badge-red"}`} style={{ marginTop: 0 }}>
+                        {pct >= 0 ? "+" : ""}{pct.toFixed(2)}%
                       </div>
                     )}
                   </div>
                   <div className="ticker-price">{isLoadingPrices ? "..." : `$${fmt(d.price, 2)}`}</div>
                   {!isLoadingPrices && (
-                    <div className={`ticker-change ${d.change >= 0 ? "up" : "dn"}`}>
-                      {d.change >= 0 ? "▲" : "▼"} {Math.abs(d.change).toFixed(2)}
+                    <div className={`ticker-change ${change >= 0 ? "up" : "dn"}`}>
+                      {change >= 0 ? "▲" : "▼"} {Math.abs(change).toFixed(2)}
                     </div>
                   )}
                 </div>
@@ -1283,7 +1256,6 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
         </div>
       </div>
 
-      {/* HOLDINGS TABLE */}
       <div className="card">
         <div className="section-header">
           <span className="section-title">หุ้น Dime ที่ถือ</span>
@@ -1313,14 +1285,12 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
                   <td className="text-right text-mono">{r.shares}</td>
                   <td className="text-right text-mono">${fmt(r.avgCost, 2)}</td>
                   <td className="text-right text-mono">{isLoadingPrices ? "..." : `$${fmt(r.currentPrice, 2)}`}</td>
-                  <td className="text-right" style={{ fontFamily: "var(--font-head)", fontWeight: 600 }}>
-                    {isLoadingPrices ? "..." : `฿${fmt(r.mktVal)}`}
-                  </td>
+                  <td className="text-right" style={{ fontFamily: "var(--font-head)", fontWeight: 600 }}>{isLoadingPrices ? "..." : `฿${fmt(r.mktVal)}`}</td>
                   <td className="text-right" style={{ fontFamily: "var(--font-head)", fontWeight: 700, color: r.pnl >= 0 && !isLoadingPrices ? "var(--green)" : "var(--red)" }}>
                     {isLoadingPrices ? "..." : (
                       <>
                         {r.pnl >= 0 ? "+" : ""}฿{fmt(r.pnl)}<br />
-                        <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 400 }}>({r.pnl >= 0 ? "+" : ""}{r.pnlPct.toFixed(1)}%)</span>
+                        <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 400 }}>({r.pnl >= 0 ? "+" : ""}{parseFloat(r.pnlPct || 0).toFixed(1)}%)</span>
                       </>
                     )}
                   </td>
@@ -1334,7 +1304,6 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
         </div>
       </div>
 
-      {/* ADD HOLDING */}
       <div className="card">
         <div className="card-title">เพิ่ม / แก้ไข Portfolio (ใส่หุ้นเดิมเพื่อถัวเฉลี่ย)</div>
         <div className="input-row">
@@ -1357,12 +1326,12 @@ function BudgetTab({ txs }) {
   const actuals = [0, 0, 0, 0, 0];
   const forecast = [0, 0, 0, 0, 0, 0];
   const spent = {};
-  txs.filter(t => t.amount < 0 && t.date.startsWith(new Date().toISOString().slice(0, 7))).forEach(t => {
-    spent[t.cat] = (spent[t.cat] || 0) + Math.abs(t.amount);
+  txs.filter(t => (parseFloat(t.amount) || 0) < 0 && t.date && t.date.startsWith(new Date().toISOString().slice(0, 7))).forEach(t => {
+    spent[t.cat] = (spent[t.cat] || 0) + Math.abs(parseFloat(t.amount) || 0);
   });
-  const fixCost = txs.filter(t => t.type === "fix" && t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
-  const varCost = txs.filter(t => t.type === "var" && t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
-
+  const fixCost = txs.filter(t => t.type === "fix" && (parseFloat(t.amount) || 0) < 0).reduce((s, t) => s + Math.abs(parseFloat(t.amount) || 0), 0);
+  const varCost = txs.filter(t => t.type === "var" && (parseFloat(t.amount) || 0) < 0).reduce((s, t) => s + Math.abs(parseFloat(t.amount) || 0), 0);
+  
   return (
     <div className="gap-16">
       <div className="grid-2">
@@ -1382,37 +1351,32 @@ function BudgetTab({ txs }) {
         </div>
       </div>
 
-      {/* BUDGET PROGRESS */}
       <div className="card">
         <div className="section-title" style={{ marginBottom: 20 }}>งบประมาณแต่ละหมวด</div>
         {BUDGETS.map(b => {
           const cat = CATEGORIES[b.cat];
-          const s   = spent[b.cat] || 0;
-          const pct = Math.min((s / b.limit) * 100, 100);
-          const over = s > b.limit;
+          const s   = parseFloat(spent[b.cat]) || 0;
+          const limit = parseFloat(b.limit) || 1;
+          const pct = Math.min((s / limit) * 100, 100);
+          const over = s > limit;
           return (
             <div key={b.cat} className="budget-item">
               <div className="budget-header">
                 <span className="budget-name">{cat.icon} {cat.label}</span>
-                <span className="budget-amounts">฿{fmt(s)} / ฿{fmt(b.limit)}</span>
+                <span className="budget-amounts">฿{fmt(s)} / ฿{fmt(limit)}</span>
               </div>
               <div className="progress-bar">
                 <div className="progress-fill" style={{
                   width: `${pct}%`,
-                  background: over
-                    ? "linear-gradient(90deg, var(--red2), var(--red))"
-                    : pct > 80
-                    ? "linear-gradient(90deg, var(--gold2), var(--gold))"
-                    : "linear-gradient(90deg, var(--green2), var(--green))"
+                  background: over ? "linear-gradient(90deg, var(--red2), var(--red))" : pct > 80 ? "linear-gradient(90deg, var(--gold2), var(--gold))" : "linear-gradient(90deg, var(--green2), var(--green))"
                 }} />
               </div>
-              {over && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 5, fontFamily: "var(--font-mono)" }}>⚠️ เกินงบ ฿{fmt(s - b.limit)}</div>}
+              {over && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 5, fontFamily: "var(--font-mono)" }}>⚠️ เกินงบ ฿{fmt(s - limit)}</div>}
             </div>
           );
         })}
       </div>
 
-      {/* FORECAST */}
       <div className="card">
         <div className="card-title">คาดการณ์รายจ่าย 6 เดือน (รอเก็บข้อมูล)</div>
         <div style={{ display: "flex", gap: 8, alignItems: "flex-end", height: 100 }}>
@@ -1424,12 +1388,7 @@ function BudgetTab({ txs }) {
                 <div style={{ fontSize: 9, color: "var(--text2)", fontFamily: "var(--font-mono)" }}>
                   {isForecast ? "~" : ""}{fmt(v / 1000, 0)}k
                 </div>
-                <div style={{
-                  width: "100%", height: `${(v / max) * 80}px`, minHeight: 3,
-                  background: isForecast ? "rgba(75,143,255,0.35)" : "linear-gradient(to top, var(--red2), var(--red))",
-                  borderRadius: "5px 5px 0 0",
-                  border: isForecast ? "1px dashed rgba(75,143,255,0.5)" : "none",
-                }} />
+                <div style={{ width: "100%", height: `${(v / max) * 80}px`, minHeight: 3, background: isForecast ? "rgba(75,143,255,0.35)" : "linear-gradient(to top, var(--red2), var(--red))", borderRadius: "5px 5px 0 0", border: isForecast ? "1px dashed rgba(75,143,255,0.5)" : "none" }} />
                 <div style={{ fontSize: 9, color: "var(--text3)", fontFamily: "var(--font-mono)" }}>{months[i]}</div>
               </div>
             );
@@ -1472,7 +1431,7 @@ export default function App() {
   const [livePrices, setLivePrices] = useState({ ...MOCK_PRICES, ...MOCK_CRYPTO });
   const [isLoadingPrices, setIsLoadingPrices] = useState(true);
 
-    useEffect(() => { localStorage.setItem("tw_tab", activeTab); }, [activeTab]);
+  useEffect(() => { localStorage.setItem("tw_tab", activeTab); }, [activeTab]);
 
   useEffect(() => {
     if (!user) return;
@@ -1482,7 +1441,6 @@ export default function App() {
         const data = res.data();
         setTxs(data.txs || []);
         setPortfolio(data.portfolio || []);
-        // 🛡️ ป้องกัน NaN: กรองตัวหนังสือออกจากค่าเงินให้อัตโนมัติ
         const rawRate = parseFloat(data.exchangeRate);
         setExchangeRate(!isNaN(rawRate) ? rawRate : 32.54);
       }
@@ -1491,8 +1449,6 @@ export default function App() {
     return () => unsub();
   }, [user]);
 
-
-  // 🌐 โค้ดใหม่: ระบบดึงเรทเงิน USD -> THB อัตโนมัติแบบเรียลไทม์
   useEffect(() => {
     async function fetchLiveExchangeRate() {
       if (!user) return;
@@ -1500,7 +1456,7 @@ export default function App() {
         const res = await fetch("https://open.er-api.com/v6/latest/USD");
         const data = await res.json();
         if (data && data.rates && data.rates.THB) {
-          const liveRate = data.rates.THB;
+          const liveRate = parseFloat(data.rates.THB) || 32.54;
           setExchangeRate(liveRate);
           setDoc(doc(db, "users", user), { exchangeRate: liveRate }, { merge: true });
         }
@@ -1513,15 +1469,12 @@ export default function App() {
     return () => clearInterval(interval);
   }, [user]);
 
-      // 📈 ระบบดึงราคาหุ้นจาก Finnhub (แบบฉลาด: ดึงตามหุ้นที่มีในพอร์ตอัตโนมัติ)
   useEffect(() => {
     if (!user || portfolio.length === 0) {
       setIsLoadingPrices(false);
       return;
     }
-    
     const API_KEY = "d7sandpr01qorsvi1jagd7sandpr01qorsvi1jb0";
-    
     const uniqueSymbols = [...new Set(portfolio.filter(p => p.exchange !== "CRYPTO").map(p => p.symbol))];
     
     Promise.all(uniqueSymbols.map(sym =>
@@ -1529,13 +1482,12 @@ export default function App() {
         .then(r => r.json())
         .then(d => ({ 
           symbol: sym, 
-          price: d.c || 0,
-          change: d.d || 0, // 👈 เพิ่มบรรทัดนี้: สั่งให้ดึงตัวเลขส่วนต่างราคามาด้วย
-          pct: d.dp || 0    // 👈 เพิ่มบรรทัดนี้: สั่งให้ดึงเปอร์เซ็นต์ % มาด้วย
+          price: parseFloat(d.c) || 0,
+          change: parseFloat(d.d) || 0,
+          pct: parseFloat(d.dp) || 0
         }))
         .catch(err => {
-          console.error("API มีปัญหาตรงตัวนี้:", sym, err);
-          return { symbol: sym, price: 0 };
+          return { symbol: sym, price: 0, change: 0, pct: 0 };
         })
     )).then(results => {
       const newLive = {};
@@ -1544,8 +1496,6 @@ export default function App() {
       setIsLoadingPrices(false);
     });
   }, [user, portfolio]);
-
-
 
   const handleSetTxs = (action) => {
     setTxs(prev => {
@@ -1564,8 +1514,8 @@ export default function App() {
   };
 
   const handleSetExchangeRate = (val) => {
-    setExchangeRate(val);
-    if (user) setDoc(doc(db, "users", user), { exchangeRate: val }, { merge: true });
+    setExchangeRate(parseFloat(val) || 32.54);
+    if (user) setDoc(doc(db, "users", user), { exchangeRate: parseFloat(val) || 32.54 }, { merge: true });
   };
 
   const handleLogin = (e) => {
@@ -1579,7 +1529,6 @@ export default function App() {
     }
   };
 
-  // ─── LOGIN SCREEN ───────────────────────────────────────────
   if (!user) {
     return (
       <div className="login-wrapper">
@@ -1599,22 +1548,9 @@ export default function App() {
           <div className="login-welcome">Welcome back</div>
           <p className="login-sub">Sign in to access your dashboard</p>
           <form onSubmit={handleLogin}>
-            <input
-              className="login-inp-styled"
-              placeholder="Username"
-              autoComplete="username"
-              onChange={e => setUsernameInput(e.target.value)}
-            />
-            <input
-              className="login-inp-styled"
-              type="password"
-              placeholder="Password"
-              autoComplete="current-password"
-              onChange={e => setPasswordInput(e.target.value)}
-            />
-            {loginError && (
-              <p className="login-error">⚠ รหัสผ่านไม่ถูกต้อง</p>
-            )}
+            <input className="login-inp-styled" placeholder="Username" autoComplete="username" onChange={e => setUsernameInput(e.target.value)} />
+            <input className="login-inp-styled" type="password" placeholder="Password" autoComplete="current-password" onChange={e => setPasswordInput(e.target.value)} />
+            {loginError && <p className="login-error">⚠ รหัสผ่านไม่ถูกต้อง</p>}
             <button className="login-btn-styled" type="submit">Access System →</button>
           </form>
         </div>
@@ -1622,13 +1558,10 @@ export default function App() {
     );
   }
 
-  // ─── MAIN APP ────────────────────────────────────────────────
   return (
     <>
       <style>{styles}</style>
       <div className="app">
-
-        {/* TOP NAV */}
         <nav className="topnav">
           <div className="topnav-brand">
             <div className="topnav-logo">Th</div>
@@ -1638,34 +1571,19 @@ export default function App() {
             </div>
           </div>
           <div className="topnav-right">
-            <div className="topnav-sync">
-              <div className="sync-dot" />
-              Active
-            </div>
-            <button
-              className="logout-btn"
-              onClick={() => { localStorage.removeItem("tw_user"); setUser(null); }}
-            >
-              Log Out
-            </button>
+            <div className="topnav-sync"><div className="sync-dot" />Active</div>
+            <button className="logout-btn" onClick={() => { localStorage.removeItem("tw_user"); setUser(null); }}>Log Out</button>
           </div>
         </nav>
 
-        {/* TABS */}
         <div className="tabs">
           {TABS.map(t => (
-            <button
-              key={t.id}
-              className={`tab ${activeTab === t.id ? "active" : ""}`}
-              onClick={() => setActiveTab(t.id)}
-            >
-              <span className="tab-icon">{t.icon}</span>
-              {t.label}
+            <button key={t.id} className={`tab ${activeTab === t.id ? "active" : ""}`} onClick={() => setActiveTab(t.id)}>
+              <span className="tab-icon">{t.icon}</span>{t.label}
             </button>
           ))}
         </div>
 
-        {/* CONTENT */}
         <div className="main">
           {loading ? (
             <div className="loading-wrap">
@@ -1682,10 +1600,8 @@ export default function App() {
             </>
           )}
         </div>
-
       </div>
     </>
   );
 }
-
 
