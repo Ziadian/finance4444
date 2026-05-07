@@ -1089,42 +1089,33 @@ function SmsParserTab({ setTxs, portfolio, setPortfolio, exchangeRate }) {
 
   return (
     <div className="gap-16">
-      <div className="alert alert-info">💡 คัดลอก SMS / Notification จาก MAKE หรือแอปเทรดมาวาง แล้วกด Parse ระบบจะดึงข้อมูลอัตโนมัติ</div>
+      <div className="alert alert-info">💡 คัดลอก SMS จาก MAKE มาวาง ระบบจะดึงข้อมูลอัตโนมัติ</div>
       <div className="card">
-        <div className="card-title">ตัวอย่าง SMS Format ที่รองรับ</div>
+        <div className="card-title">ตัวอย่าง SMS ที่รองรับ</div>
         {examples.map((e, i) => (
           <div key={i} className="sms-example" onClick={() => { setSms(e); setResult(null); }}>{e}</div>
         ))}
-        <div style={{ fontSize: 11, color: "var(--text3)", fontFamily: "var(--font-mono)", marginTop: 8 }}>คลิกที่ตัวอย่างเพื่อโหลดข้อความ</div>
       </div>
       <div className="card">
-        <div className="card-title">วาง SMS / Notification ที่นี่</div>
-        <textarea className="sms-box" placeholder="วาง SMS จาก MAKE by KBank ที่นี่..." value={sms} onChange={e => { setSms(e.target.value); setResult(null); }} />
+        <div className="card-title">วาง SMS ตรงนี้</div>
+        <textarea className="sms-box" placeholder="วาง SMS ที่นี่..." value={sms} onChange={e => { setSms(e.target.value); setResult(null); }} />
         <div className="row mt-12">
           <button className="btn btn-blue" onClick={parse}>🔍 Parse SMS</button>
-          <button className="btn btn-ghost" onClick={() => { setSms(""); setResult(null); }}>ล้าง</button>
         </div>
         {result && (
           <div className="parse-result mt-16">
             {result.valid ? (
               <>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--green)", marginBottom: 14, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>✅ PARSE SUCCESS</div>
-                {[
-                  ["TYPE",    result.type === "income" ? "💰 รายรับ" : "💸 รายจ่าย"],
-                  ["AMOUNT",  `${result.direction}฿${fmt(result.amount, 2)}`],
-                  ...(result.cat === "invest" && result.symbol ? [["SYMBOL", result.symbol], ["SHARES", `${result.shares || 1} หุ้น`]] : []),
-                  ["DATE",    result.date],
-                  ["MERCHANT", result.merchant],
-                  ["CATEGORY", `${CATEGORIES[result.cat]?.icon} ${CATEGORIES[result.cat]?.label}`],
-                ].map(([k, v]) => (
-                  <div key={k} className="parse-row"><span className="parse-key">{k}</span><span className="parse-val">{v}</span></div>
-                ))}
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--green)", marginBottom: 14, fontFamily: "var(--font-mono)" }}>✅ PARSE SUCCESS</div>
+                <div className="parse-row"><span className="parse-key">TYPE</span><span className="parse-val">{result.type === "income" ? "💰 รับ" : "💸 จ่าย"}</span></div>
+                <div className="parse-row"><span className="parse-key">AMOUNT</span><span className="parse-val">฿{fmt(result.amount, 2)}</span></div>
+                <div className="parse-row"><span className="parse-key">MERCHANT</span><span className="parse-val">{result.merchant}</span></div>
                 <div className="row mt-12">
                   <button className="btn btn-green" onClick={addToLedger} disabled={added}>{added ? "✅ เพิ่มแล้ว" : "+ บันทึกลงบัญชี"}</button>
                 </div>
               </>
             ) : (
-              <div style={{ color: "var(--red)", fontSize: 13, fontFamily: "var(--font-mono)" }}>❌ ไม่พบข้อมูลที่ Parse ได้ — ลองตรวจสอบรูปแบบ SMS</div>
+              <div style={{ color: "var(--red)", fontSize: 13 }}>❌ ไม่พบข้อมูลที่ Parse ได้</div>
             )}
           </div>
         )}
@@ -1168,12 +1159,6 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
     setSymbol(""); setShares(""); setCost("");
   }
 
-  function deleteHolding(sym) {
-    if (window.confirm(`ต้องการลบหุ้น ${sym} ออกจากพอร์ตใช่หรือไม่?`)) {
-      setPortfolio(prev => prev.filter(p => p.symbol !== sym));
-    }
-  }
-
   const rows = portfolio.map(p => {
     const px = livePrices[p.symbol];
     const currentPrice = parseFloat(px?.price || p.avgCost) || 0;
@@ -1193,95 +1178,61 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
 
   return (
     <div className="gap-16">
-      {/* SUMMARY */}
       <div className="grid-4">
         <div className="card metric-card" style={{ "--accent": "#a78bfa" }}>
-          <div className="card-glow" />
           <div className="card-title">มูลค่าพอร์ตรวม (THB)</div>
-          <div className="metric-val" style={{ fontSize: isLoadingPrices ? "18px" : undefined }}>{isLoadingPrices ? "กำลังโหลด..." : `฿${fmt(totalVal)}`}</div>
-          <div className="metric-sub">{isLoadingPrices ? "รอข้อมูล API..." : "รวมกำไร/ขาดทุนแล้ว"}</div>
+          <div className="metric-val">฿{fmt(totalVal)}</div>
+          <div className="metric-sub">ราคาปัจจุบัน</div>
         </div>
-
         <div className="card metric-card" style={{ "--accent": "#4b8fff" }}>
-          <div className="card-glow" />
           <div className="card-title">เงินทุนรวม (COST)</div>
           <div className="metric-val">฿{fmt(totalCost)}</div>
-          <div className="metric-sub">เงินลงทุนสุทธิ (ไม่รวมกำไร)</div>
+          <div className="metric-sub">เงินต้นสุทธิ</div>
         </div>
-
         <div className="card metric-card" style={{ "--accent": totalPnL >= 0 ? "#05e29c" : "#ff3d6b" }}>
-          <div className="card-glow" />
-          <div className="card-title">กำไร / ขาดทุน (P&L)</div>
-          <div className="metric-val" style={{ color: totalPnL >= 0 && !isLoadingPrices ? "var(--green)" : "var(--red)", fontSize: isLoadingPrices ? "18px" : undefined }}>
-            {isLoadingPrices ? "กำลังโหลด..." : `${totalPnL >= 0 ? "+" : ""}฿${fmt(totalPnL)}`}
+          <div className="card-title">กำไร / ขาดทุน</div>
+          <div className="metric-val" style={{ color: totalPnL >= 0 ? "var(--green)" : "var(--red)" }}>
+            ฿{fmt(totalPnL)}
           </div>
           <div className={`metric-badge ${totalPnL >= 0 ? "badge-green" : "badge-red"}`}>
-            {isLoadingPrices ? "..." : `${totalPnL >= 0 ? "+" : ""}${((totalPnL / (totalCost || 1)) * 100).toFixed(2)}%`}
+            {((totalPnL / (totalCost || 1)) * 100).toFixed(2)}%
           </div>
         </div>
-
-                <div className="card metric-card" style={{ "--accent": "#ffbe3d" }}>
-          <div className="card-glow" />
+        <div className="card metric-card" style={{ "--accent": "#ffbe3d" }}>
           <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>USD/THB RATE</span>
-            {/* 🔄 ดึงค่าเงินทันที */}
             <button 
               onClick={async (e) => {
-                const btn = e.currentTarget;
-                btn.style.opacity = "0.5";
-                btn.innerText = "⏳";
+                const btn = e.currentTarget; btn.innerText = "⏳";
                 try {
                   const res = await fetch("https://open.er-api.com/v6/latest/USD");
                   const data = await res.json();
                   if (data?.rates?.THB) setExchangeRate(data.rates.THB);
                 } catch(e) {}
-                setTimeout(() => { btn.style.opacity = "1"; btn.innerText = "🔄"; }, 500);
+                btn.innerText = "🔄";
               }} 
-              style={{ background: "none", border: "none", cursor: "pointer", fontSize: "12px", filter: "grayscale(100%) brightness(200%)" }}
-              title="ดึงค่าล่าสุด"
-            >
-              🔄
-            </button>
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>🔄</button>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "4px" }}>
-            <span style={{ fontSize: "26px", fontWeight: 700, fontFamily: "var(--font-head)", color: "var(--gold)" }}>฿</span>
+            <span style={{ fontSize: "24px", fontWeight: 700 }}>฿</span>
             <input type="number" step="0.01" value={exchangeRate} onChange={e => setExchangeRate(parseFloat(e.target.value) || 0)} className="exchange-input" />
           </div>
-          <div className="metric-sub">ดึงค่าล่าสุดเมื่อสลับหน้าจอ (หรือกด 🔄)</div>
         </div>
-
+      </div>
 
       <div className="card">
-        <div className="card-title">ราคาตลาด REAL-TIME · FINNHUB {isLoadingPrices && "⏳ กำลังอัปเดต..."}</div>
+        <div className="card-title">ราคาตลาด REAL-TIME</div>
         <div className="grid-3">
-          {/* เปลี่ยนจากล็อกชื่อ 3 ตัว เป็นดึงตามหุ้นที่มีในพอร์ต (ไม่ซ้ำตัว) */}
-{[...new Set(portfolio.filter(p => p.exchange !== "CRYPTO").map(p => p.symbol))].map(sym => {
-
+          {[...new Set(portfolio.filter(p => p.exchange !== "CRYPTO").map(p => p.symbol))].map(sym => {
             const d = livePrices[sym];
             if (!d) return null;
-            const pct = parseFloat(d.pct) || 0;
-            const change = parseFloat(d.change) || 0;
             return (
-              <div key={sym} style={{ padding: "16px", borderRadius: "12px", background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
-                <div className="ticker-card">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div>
-                      <div className="ticker-sym">{sym}</div>
-                      <div className="ticker-name">{d.name}</div>
-                    </div>
-                    {!isLoadingPrices && (
-                      <div className={`metric-badge ${change >= 0 ? "badge-green" : "badge-red"}`} style={{ marginTop: 0 }}>
-                        {pct >= 0 ? "+" : ""}{pct.toFixed(2)}%
-                      </div>
-                    )}
-                  </div>
-                  <div className="ticker-price">{isLoadingPrices ? "..." : `$${fmt(d.price, 2)}`}</div>
-                  {!isLoadingPrices && (
-                    <div className={`ticker-change ${change >= 0 ? "up" : "dn"}`}>
-                      {change >= 0 ? "▲" : "▼"} {Math.abs(change).toFixed(2)}
-                    </div>
-                  )}
+              <div key={sym} className="card" style={{ padding: "12px", background: "rgba(255,255,255,0.03)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ fontWeight: 700 }}>{sym}</span>
+                  <span className={d.pct >= 0 ? "tag-green" : "tag-red"}>{d.pct?.toFixed(2)}%</span>
                 </div>
+                <div style={{ fontSize: "18px", fontWeight: 700, marginTop: "4px" }}>${fmt(d.price, 2)}</div>
               </div>
             );
           })}
@@ -1289,46 +1240,24 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
       </div>
 
       <div className="card">
-        <div className="section-header">
-          <span className="section-title">หุ้น Dime ที่ถือ</span>
-        </div>
+        <div className="section-header"><span className="section-title">หุ้นที่ถือ</span></div>
         <div style={{ overflowX: "auto" }}>
           <table className="data-table">
             <thead>
-              <tr>
-                <th>ชื่อ</th>
-                <th>Exchange</th>
-                <th className="text-right">จำนวน</th>
-                <th className="text-right">ต้นทุน/หน่วย</th>
-                <th className="text-right">ราคาปัจจุบัน</th>
-                <th className="text-right">มูลค่า (฿)</th>
-                <th className="text-right">P&L</th>
-                <th className="text-right">จัดการ</th>
-              </tr>
+              <tr><th>ชื่อ</th><th>จำนวน</th><th>ต้นทุน</th><th>ราคาตลาด</th><th>มูลค่า (฿)</th><th>P&L</th><th>จัดการ</th></tr>
             </thead>
             <tbody>
-              {rows.length === 0 && (
-                <tr><td colSpan="8" style={{ textAlign: "center", color: "var(--text2)", padding: "28px", fontFamily: "var(--font-mono)", fontSize: 12 }}>ยังไม่มีหุ้นในพอร์ต</td></tr>
-              )}
               {rows.map((r, i) => (
                 <tr key={i}>
-                  <td style={{ fontFamily: "var(--font-head)", fontWeight: 700, letterSpacing: "-0.01em" }}>{r.symbol}</td>
-                  <td><span className={`tag ${r.exchange === "CRYPTO" ? "tag-gold" : "tag-blue"}`}>{r.exchange}</span></td>
-                  <td className="text-right text-mono">{r.shares}</td>
-                  <td className="text-right text-mono">${fmt(r.avgCost, 2)}</td>
-                  <td className="text-right text-mono">{isLoadingPrices ? "..." : `$${fmt(r.currentPrice, 2)}`}</td>
-                  <td className="text-right" style={{ fontFamily: "var(--font-head)", fontWeight: 600 }}>{isLoadingPrices ? "..." : `฿${fmt(r.mktVal)}`}</td>
-                  <td className="text-right" style={{ fontFamily: "var(--font-head)", fontWeight: 700, color: r.pnl >= 0 && !isLoadingPrices ? "var(--green)" : "var(--red)" }}>
-                    {isLoadingPrices ? "..." : (
-                      <>
-                        {r.pnl >= 0 ? "+" : ""}฿{fmt(r.pnl)}<br />
-                        <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 400 }}>({r.pnl >= 0 ? "+" : ""}{parseFloat(r.pnlPct || 0).toFixed(1)}%)</span>
-                      </>
-                    )}
+                  <td><b>{r.symbol}</b></td>
+                  <td className="text-right">{r.shares}</td>
+                  <td className="text-right">${fmt(r.avgCost, 2)}</td>
+                  <td className="text-right">${fmt(r.currentPrice, 2)}</td>
+                  <td className="text-right">฿{fmt(r.mktVal)}</td>
+                  <td className={`text-right ${r.pnl >= 0 ? "tag-green" : "tag-red"}`}>
+                    {r.pnl >= 0 ? "+" : ""}฿{fmt(r.pnl)}<br/><small>({r.pnlPct.toFixed(1)}%)</small>
                   </td>
-                  <td className="text-right">
-                    <button className="btn-action" onClick={() => deleteHolding(r.symbol)} title="ลบ">🗑️</button>
-                  </td>
+                  <td className="text-right"><button onClick={() => setPortfolio(portfolio.filter((_, idx) => idx !== i))}>🗑️</button></td>
                 </tr>
               ))}
             </tbody>
@@ -1337,15 +1266,11 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
       </div>
 
       <div className="card">
-        <div className="card-title">เพิ่ม / แก้ไข Portfolio (ใส่หุ้นเดิมเพื่อถัวเฉลี่ย)</div>
+        <div className="card-title">เพิ่มพอร์ตหุ้น</div>
         <div className="input-row">
-          <input className="inp" placeholder="Symbol (เช่น AAPL, BTC)" value={symbol} onChange={e => setSymbol(e.target.value)} />
-          <input className="inp" type="number" placeholder="จำนวนหุ้น / เหรียญ" value={shares} onChange={e => setShares(e.target.value)} />
-          <input className="inp" type="number" placeholder="ต้นทุนต่อหน่วย (USD)" value={cost} onChange={e => setCost(e.target.value)} />
-          <select className="inp" value={exch} onChange={e => setExch(e.target.value)}>
-            <option value="US">🇺🇸 US</option>
-            <option value="CRYPTO">₿ Crypto</option>
-          </select>
+          <input className="inp" placeholder="Symbol" value={symbol} onChange={e => setSymbol(e.target.value)} />
+          <input className="inp" type="number" placeholder="จำนวน" value={shares} onChange={e => setShares(e.target.value)} />
+          <input className="inp" type="number" placeholder="ต้นทุน (USD)" value={cost} onChange={e => setCost(e.target.value)} />
           <button className="btn btn-blue" onClick={addHolding}>+ เพิ่ม</button>
         </div>
       </div>
@@ -1354,99 +1279,14 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
 }
 
 function BudgetTab({ txs }) {
-  const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย."];
-  const actuals = [0, 0, 0, 0, 0];
-  const forecast = [0, 0, 0, 0, 0, 0];
-  const spent = {};
-  txs.filter(t => (parseFloat(t.amount) || 0) < 0 && t.date && t.date.startsWith(new Date().toISOString().slice(0, 7))).forEach(t => {
-    spent[t.cat] = (spent[t.cat] || 0) + Math.abs(parseFloat(t.amount) || 0);
-  });
-  const fixCost = txs.filter(t => t.type === "fix" && (parseFloat(t.amount) || 0) < 0).reduce((s, t) => s + Math.abs(parseFloat(t.amount) || 0), 0);
-  const varCost = txs.filter(t => t.type === "var" && (parseFloat(t.amount) || 0) < 0).reduce((s, t) => s + Math.abs(parseFloat(t.amount) || 0), 0);
-  
-  return (
-    <div className="gap-16">
-      <div className="grid-2">
-        <div className="card metric-card" style={{ "--accent": "#a78bfa" }}>
-          <div className="card-glow" />
-          <div className="card-title">Fix Cost (คงที่)</div>
-          <div className="metric-val">฿{fmt(fixCost)}</div>
-          <div className="metric-sub">ค่าเช่า, Netflix, อินเทอร์เน็ต</div>
-          <div className="metric-badge badge-blue">จ่ายทุกเดือน</div>
-        </div>
-        <div className="card metric-card" style={{ "--accent": "#ffbe3d" }}>
-          <div className="card-glow" />
-          <div className="card-title">Variable Cost (ผันแปร)</div>
-          <div className="metric-val">฿{fmt(varCost)}</div>
-          <div className="metric-sub">อาหาร, เดินทาง, ช้อปปิ้ง</div>
-          <div className="metric-badge badge-gold">ขึ้นกับพฤติกรรม</div>
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="section-title" style={{ marginBottom: 20 }}>งบประมาณแต่ละหมวด</div>
-        {BUDGETS.map(b => {
-          const cat = CATEGORIES[b.cat];
-          const s   = parseFloat(spent[b.cat]) || 0;
-          const limit = parseFloat(b.limit) || 1;
-          const pct = Math.min((s / limit) * 100, 100);
-          const over = s > limit;
-          return (
-            <div key={b.cat} className="budget-item">
-              <div className="budget-header">
-                <span className="budget-name">{cat.icon} {cat.label}</span>
-                <span className="budget-amounts">฿{fmt(s)} / ฿{fmt(limit)}</span>
-              </div>
-              <div className="progress-bar">
-                <div className="progress-fill" style={{
-                  width: `${pct}%`,
-                  background: over ? "linear-gradient(90deg, var(--red2), var(--red))" : pct > 80 ? "linear-gradient(90deg, var(--gold2), var(--gold))" : "linear-gradient(90deg, var(--green2), var(--green))"
-                }} />
-              </div>
-              {over && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 5, fontFamily: "var(--font-mono)" }}>⚠️ เกินงบ ฿{fmt(s - limit)}</div>}
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="card">
-        <div className="card-title">คาดการณ์รายจ่าย 6 เดือน (รอเก็บข้อมูล)</div>
-        <div style={{ display: "flex", gap: 8, alignItems: "flex-end", height: 100 }}>
-          {actuals.concat([forecast[forecast.length - 1]]).map((v, i) => {
-            const max       = Math.max(...actuals, forecast[forecast.length - 1], 1);
-            const isForecast = i === actuals.length;
-            return (
-              <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                <div style={{ fontSize: 9, color: "var(--text2)", fontFamily: "var(--font-mono)" }}>
-                  {isForecast ? "~" : ""}{fmt(v / 1000, 0)}k
-                </div>
-                <div style={{ width: "100%", height: `${(v / max) * 80}px`, minHeight: 3, background: isForecast ? "rgba(75,143,255,0.35)" : "linear-gradient(to top, var(--red2), var(--red))", borderRadius: "5px 5px 0 0", border: isForecast ? "1px dashed rgba(75,143,255,0.5)" : "none" }} />
-                <div style={{ fontSize: 9, color: "var(--text3)", fontFamily: "var(--font-mono)" }}>{months[i]}</div>
-              </div>
-            );
-          })}
-        </div>
-        <div className="divider" />
-        <div className="row">
-          <div style={{ width: 10, height: 10, borderRadius: 3, background: "var(--red)" }} />
-          <span style={{ fontSize: 11, color: "var(--text2)", fontFamily: "var(--font-mono)" }}>รายจ่ายจริง</span>
-          <div style={{ width: 10, height: 10, borderRadius: 3, background: "rgba(75,143,255,0.4)", border: "1px dashed rgba(75,143,255,0.6)" }} />
-          <span style={{ fontSize: 11, color: "var(--text2)", fontFamily: "var(--font-mono)" }}>คาดการณ์ (ค่าเฉลี่ย)</span>
-        </div>
-      </div>
-    </div>
-  );
+  return <div className="card">ระบบงบประมาณและคาดการณ์ (กำลังพัฒนา)</div>;
 }
 
-// ============================================================
-// MAIN APP
-// ============================================================
 const TABS = [
   { id: "dashboard",    icon: "◼",  label: "Dashboard" },
   { id: "transactions", icon: "💳", label: "รายรับ-รายจ่าย" },
-  { id: "sms",          icon: "📲", label: "MAKE / Dime Parser" },
+  { id: "sms",          icon: "📲", label: "MAKE Parser" },
   { id: "portfolio",    icon: "📈", label: "พอร์ตลงทุน" },
-  { id: "budget",       icon: "🎯", label: "งบ & คาดการณ์" },
 ];
 
 export default function App() {
@@ -1454,13 +1294,12 @@ export default function App() {
   const [usernameInput, setUsernameInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [loginError, setLoginError] = useState(false);
-
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem("tw_tab") || "dashboard");
   const [txs, setTxs] = useState([]);
   const [portfolio, setPortfolio] = useState([]);
   const [exchangeRate, setExchangeRate] = useState(32.54);
   const [loading, setLoading] = useState(true);
-  const [livePrices, setLivePrices] = useState({ ...MOCK_PRICES, ...MOCK_CRYPTO });
+  const [livePrices, setLivePrices] = useState({});
   const [isLoadingPrices, setIsLoadingPrices] = useState(true);
 
   useEffect(() => { localStorage.setItem("tw_tab", activeTab); }, [activeTab]);
@@ -1481,70 +1320,37 @@ export default function App() {
     return () => unsub();
   }, [user]);
 
-    // 🌐 ระบบดึงเรทเงินอัจฉริยะ (Focus-based Sync + 15 Min Freshness)
   useEffect(() => {
-    let lastFetchTime = 0;
-    const FRESHNESS_LIMIT = 15 * 60 * 1000; // 15 นาที (หน่วยเป็นมิลลิวินาที)
-
     async function fetchLiveExchangeRate() {
-      const now = Date.now();
-      // 🛡️ ถ้าเพิ่งดึงไปไม่ถึง 15 นาที ไม่ต้องยิง API ซ้ำให้เปลือง
-      if (now - lastFetchTime < FRESHNESS_LIMIT && lastFetchTime !== 0) return;
-
       if (!user) return;
       try {
         const res = await fetch("https://open.er-api.com/v6/latest/USD");
         const data = await res.json();
-        if (data && data.rates && data.rates.THB) {
+        if (data?.rates?.THB) {
           const liveRate = parseFloat(data.rates.THB) || 32.54;
-          setExchangeRate(liveRate); // บันทึกลง State + Firebase อัตโนมัติ
-          lastFetchTime = Date.now(); // จดเวลาไว้ว่าดึงสำเร็จตอนไหน
+          setExchangeRate(liveRate);
+          setDoc(doc(db, "users", user), { exchangeRate: liveRate }, { merge: true });
         }
-      } catch (err) {
-        console.error("ดึงค่าเงินอัตโนมัติไม่สำเร็จ:", err);
-      }
+      } catch (err) {}
     }
-
-    // 1. ดึงทันทีที่เปิดแอป 1 รอบ
     fetchLiveExchangeRate();
-
-    // 2. ⚡ ทีเด็ด: สั่งให้ดึงใหม่ "ทุกครั้งที่พี่สลับหน้าจอหรือแท็บกลับมาดูแอป"
     window.addEventListener('focus', fetchLiveExchangeRate);
-
-    // 3. ป้องกันเหนียว: ถ้าเปิดค้างหน้าจอทิ้งไว้ ก็ให้เช็คทุกๆ 30 นาที
-    const interval = setInterval(fetchLiveExchangeRate, 1800000);
-
-    return () => {
-      window.removeEventListener('focus', fetchLiveExchangeRate);
-      clearInterval(interval);
-    };
+    return () => window.removeEventListener('focus', fetchLiveExchangeRate);
   }, [user]);
 
-
   useEffect(() => {
-    if (!user || portfolio.length === 0) {
-      setIsLoadingPrices(false);
-      return;
-    }
+    if (!user || portfolio.length === 0) { setIsLoadingPrices(false); return; }
     const API_KEY = "d7sandpr01qorsvi1jagd7sandpr01qorsvi1jb0";
-    const uniqueSymbols = [...new Set(portfolio.filter(p => p.exchange !== "CRYPTO").map(p => p.symbol))];
-    
+    const uniqueSymbols = [...new Set(portfolio.map(p => p.symbol))];
     Promise.all(uniqueSymbols.map(sym =>
       fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${API_KEY}`)
         .then(r => r.json())
-        .then(d => ({ 
-          symbol: sym, 
-          price: parseFloat(d.c) || 0,
-          change: parseFloat(d.d) || 0,
-          pct: parseFloat(d.dp) || 0
-        }))
-        .catch(err => {
-          return { symbol: sym, price: 0, change: 0, pct: 0 };
-        })
+        .then(d => ({ symbol: sym, price: parseFloat(d.c) || 0, pct: parseFloat(d.dp) || 0 }))
+        .catch(() => ({ symbol: sym, price: 0, pct: 0 }))
     )).then(results => {
       const newLive = {};
       results.forEach(r => { if (r.price > 0) newLive[r.symbol] = r; });
-      setLivePrices(prev => ({ ...prev, ...newLive }));
+      setLivePrices(newLive);
       setIsLoadingPrices(false);
     });
   }, [user, portfolio]);
@@ -1565,90 +1371,42 @@ export default function App() {
     });
   };
 
-  const handleSetExchangeRate = (val) => {
-    setExchangeRate(parseFloat(val) || 32.54);
-    if (user) setDoc(doc(db, "users", user), { exchangeRate: parseFloat(val) || 32.54 }, { merge: true });
-  };
-
-  const handleLogin = (e) => {
-    e.preventDefault();
-    if (AUTHORIZED_USERS[usernameInput] === passwordInput) {
-      setUser(usernameInput);
-      localStorage.setItem("tw_user", usernameInput);
-      setLoginError(false);
-    } else {
-      setLoginError(true);
-    }
-  };
-
-  if (!user) {
-    return (
-      <div className="login-wrapper">
-        <style>{styles}</style>
-        <div className="login-glow-1" />
-        <div className="login-glow-2" />
-        <div className="login-grid-overlay" />
-        <div className="login-glass-card">
-          <div className="login-logo-wrap">
-            <div className="login-logo">Th</div>
-            <div className="login-brand-text">
-              <div className="login-brand-name">Threewit X Financial</div>
-              <div className="login-brand-sub">FINANCE ENGINE v2</div>
-            </div>
-          </div>
-          <div className="login-divider" />
-          <div className="login-welcome">Welcome back</div>
-          <p className="login-sub">Sign in to access your dashboard</p>
-          <form onSubmit={handleLogin}>
-            <input className="login-inp-styled" placeholder="Username" autoComplete="username" onChange={e => setUsernameInput(e.target.value)} />
-            <input className="login-inp-styled" type="password" placeholder="Password" autoComplete="current-password" onChange={e => setPasswordInput(e.target.value)} />
-            {loginError && <p className="login-error">⚠ รหัสผ่านไม่ถูกต้อง</p>}
-            <button className="login-btn-styled" type="submit">Access System →</button>
-          </form>
-        </div>
+  if (!user) return (
+    <div className="login-wrapper">
+      <style>{styles}</style>
+      <div className="login-glass-card">
+        <h2>Threewit OS</h2>
+        <input className="login-inp-styled" placeholder="Username" onChange={e => setUsernameInput(e.target.value)} />
+        <input className="login-inp-styled" type="password" placeholder="Password" onChange={e => setPasswordInput(e.target.value)} />
+        <button className="login-btn-styled" onClick={() => {
+          if (AUTHORIZED_USERS[usernameInput] === passwordInput) {
+            setUser(usernameInput); localStorage.setItem("tw_user", usernameInput);
+          } else setLoginError(true);
+        }}>Login</button>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <>
       <style>{styles}</style>
       <div className="app">
         <nav className="topnav">
-          <div className="topnav-brand">
-            <div className="topnav-logo">Th</div>
-            <div>
-              <div className="topnav-title">Threewit Kub 💸</div>
-              <div className="topnav-sub">FINANCE ENGINE</div>
-            </div>
-          </div>
-          <div className="topnav-right">
-            <div className="topnav-sync"><div className="sync-dot" />Active</div>
-            <button className="logout-btn" onClick={() => { localStorage.removeItem("tw_user"); setUser(null); }}>Log Out</button>
-          </div>
+          <div className="topnav-brand"><b>Threewit OS</b></div>
+          <button className="logout-btn" onClick={() => { localStorage.removeItem("tw_user"); setUser(null); }}>Log Out</button>
         </nav>
-
         <div className="tabs">
           {TABS.map(t => (
-            <button key={t.id} className={`tab ${activeTab === t.id ? "active" : ""}`} onClick={() => setActiveTab(t.id)}>
-              <span className="tab-icon">{t.icon}</span>{t.label}
-            </button>
+            <button key={t.id} className={`tab ${activeTab === t.id ? "active" : ""}`} onClick={() => setActiveTab(t.id)}>{t.label}</button>
           ))}
         </div>
-
         <div className="main">
-          {loading ? (
-            <div className="loading-wrap">
-              <div className="loading-spinner" />
-              <div className="loading-text">Syncing with Firebase...</div>
-            </div>
-          ) : (
+          {loading ? <div>Loading...</div> : (
             <>
-              {activeTab === "dashboard"    && <DashboardTab    txs={txs} portfolio={portfolio} livePrices={livePrices} isLoadingPrices={isLoadingPrices} exchangeRate={exchangeRate} />}
+              {activeTab === "dashboard"    && <DashboardTab txs={txs} portfolio={portfolio} livePrices={livePrices} isLoadingPrices={isLoadingPrices} exchangeRate={exchangeRate} />}
               {activeTab === "transactions" && <TransactionsTab txs={txs} setTxs={handleSetTxs} />}
-              {activeTab === "sms"          && <SmsParserTab    setTxs={handleSetTxs} portfolio={portfolio} setPortfolio={handleSetPortfolio} exchangeRate={exchangeRate} />}
-              {activeTab === "portfolio"    && <PortfolioTab    portfolio={portfolio} setPortfolio={handleSetPortfolio} livePrices={livePrices} isLoadingPrices={isLoadingPrices} exchangeRate={exchangeRate} setExchangeRate={handleSetExchangeRate} />}
-              {activeTab === "budget"       && <BudgetTab       txs={txs} />}
+              {activeTab === "sms"          && <SmsParserTab setTxs={handleSetTxs} portfolio={portfolio} setPortfolio={handleSetPortfolio} exchangeRate={exchangeRate} />}
+              {activeTab === "portfolio"    && <PortfolioTab portfolio={portfolio} setPortfolio={handleSetPortfolio} livePrices={livePrices} isLoadingPrices={isLoadingPrices} exchangeRate={exchangeRate} setExchangeRate={setExchangeRate} />}
             </>
           )}
         </div>
