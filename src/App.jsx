@@ -1197,7 +1197,7 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
           <div className="card-glow" />
           <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>USD/THB RATE</span>
-                        {/* 🔄 ปุ่มกดบังคับดึงเรทเงินเองทันที (OANDA Forex) */}
+            {/* 🔄 ปุ่มกดบังคับดึงเรทเงินเองทันที (OANDA Forex) */}
             <button 
               onClick={async (e) => {
                 const btn = e.currentTarget;
@@ -1226,10 +1226,9 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
       </div>
 
       <div className="card">
-              <div className="card">
         <div className="card-title">ราคาตลาด REAL-TIME · FINNHUB {isLoadingPrices && "⏳ กำลังอัปเดต..."}</div>
         <div className="grid-3">
-          {/* 🟢 ใช้โค้ดบรรทัดนี้ดึงหุ้นตามพอร์ต (ห้ามใช้คำว่า uniqueSymbols เด็ดขาด) */}
+          {/* เปลี่ยนจากล็อกชื่อ 3 ตัว เป็นดึงตามหุ้นที่มีในพอร์ต (ไม่ซ้ำตัว) */}
           {[...new Set(portfolio.filter(p => p.exchange !== "CRYPTO").map(p => p.symbol))].map(sym => {
             const d = livePrices[sym];
             if (!d) return null;
@@ -1261,7 +1260,6 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
           })}
         </div>
       </div>
-
 
       <div className="card">
         <div className="section-header">
@@ -1456,7 +1454,7 @@ export default function App() {
     return () => unsub();
   }, [user]);
 
-    // 🌐 ระบบดึงเรทเงินอัจฉริยะ (ใช้ Finnhub OANDA - แม่นยำระดับเสี้ยววินาที)
+  // 🌐 ระบบดึงเรทเงินอัจฉริยะ (ใช้ Finnhub OANDA)
   useEffect(() => {
     let lastFetchTime = 0;
     const FRESHNESS_LIMIT = 15 * 60 * 1000; // 15 นาที
@@ -1468,11 +1466,10 @@ export default function App() {
       if (!user) return;
       try {
         const API_KEY = "d7sandpr01qorsvi1jagd7sandpr01qorsvi1jb0";
-        // ดึงเรท USD/THB จากโบรกเกอร์ OANDA
         const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=OANDA:USD_THB&token=${API_KEY}`);
         const data = await res.json();
         
-        if (data && data.c) { // Finnhub ส่งราคาปัจจุบันมาในตัวแปร c
+        if (data && data.c) {
           const liveRate = parseFloat(data.c);
           setExchangeRate(liveRate);
           setDoc(doc(db, "users", user), { exchangeRate: liveRate }, { merge: true });
@@ -1492,7 +1489,6 @@ export default function App() {
       clearInterval(interval);
     };
   }, [user]);
-
 
   // 📈 ระบบดึงราคาหุ้นตามพอร์ตจริง (ดึงเปอร์เซ็นต์ % มาให้ครบ)
   useEffect(() => {
@@ -1630,4 +1626,3 @@ export default function App() {
     </>
   );
 }
-
