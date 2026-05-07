@@ -1492,16 +1492,26 @@ export default function App() {
     return () => clearInterval(interval);
   }, [user]);
 
-  // 📈 โค้ดเดิม: ระบบดึงราคาหุ้นจาก Finnhub
+    // 📈 ระบบดึงราคาหุ้นจาก Finnhub (แบบฉลาด: ดึงตามหุ้นที่มีในพอร์ตอัตโนมัติ)
   useEffect(() => {
-    if (!user) return;
+    if (!user || portfolio.length === 0) {
+      setIsLoadingPrices(false);
+      return;
+    }
+    
     const API_KEY = "d7sandpr01qorsvi1jagd7sandpr01qorsvi1jb0";
-    const symbolsToFetch = ["VOO", "NVDA", "GOOG", "META", "TSLA", "MSFT"];
-    Promise.all(symbolsToFetch.map(sym =>
+    
+    // ให้มันลิสต์รายชื่อหุ้นทั้งหมดที่มีในหน้าแอปของท่าน (ไม่เอาคริปโต และไม่ดึงตัวซ้ำ)
+    const uniqueSymbols = [...new Set(portfolio.filter(p => p.exchange !== "CRYPTO").map(p => p.symbol))];
+    
+    Promise.all(uniqueSymbols.map(sym =>
       fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${API_KEY}`)
         .then(r => r.json())
         .then(d => ({ symbol: sym, price: d.c || 0 }))
-        .catch(() => ({ symbol: sym, price: 0 }))
+        .catch(err => {
+          console.error("API มีปัญหาตรงตัวนี้:", sym, err);
+          return { symbol: sym, price: 0 };
+        })
     )).then(results => {
       const newLive = {};
       results.forEach(r => { if (r.price > 0) newLive[r.symbol] = r; });
@@ -1509,6 +1519,7 @@ export default function App() {
       setIsLoadingPrices(false);
     });
   }, [user, portfolio]);
+
 
   const handleSetTxs = (action) => {
     setTxs(prev => {
@@ -1650,5 +1661,4 @@ export default function App() {
     </>
   );
 }
-
 
