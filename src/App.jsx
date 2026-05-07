@@ -625,10 +625,10 @@ const INITIAL_TXS = [];
 const INITIAL_PORTFOLIO = [];
 
 const BUDGETS = [
-  { cat: "food",      limit: 5000 },
+  { cat: "food",      limit: 1500 },
   { cat: "transport", limit: 2000 },
-  { cat: "shopping",  limit: 3000 },
-  { cat: "bills",     limit: 12000 },
+  { cat: "shopping",  limit: 2500 },
+  { cat: "bills",     limit: 10000 },
   { cat: "health",    limit: 1500 },
 ];
 
@@ -769,12 +769,12 @@ function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices, exchangeRat
         </div>
       )}
 
-      <div className="grid-4">
+            <div className="grid-4">
         {[
-          { label: "NET WORTH",        val: isLoadingPrices ? "Loading..." : `฿${fmt(netWorth)}`,        sub: "ทรัพย์สินสุทธิ",                                                    badge: "Live",                                      btype: "badge-green", accent: "#05e29c" },
-          { label: "รายรับเดือนนี้",    val: `฿${fmt(income)}`,                                          sub: "Current Month",                                                    badge: "=",                                            btype: "badge-blue",  accent: "#4b8fff" },
-          { label: "รายจ่ายเดือนนี้",   val: `฿${fmt(expense)}`,                                          sub: `${((expense / (income || 1)) * 100).toFixed(0)}% ของรายรับ`,      badge: expense > 30000 ? "เกินงบ" : "ในงบ",                             btype: expense > 30000 ? "badge-red" : "badge-green", accent: expense > 30000 ? "#ff3d6b" : "#05e29c" },
-          { label: "มูลค่าพอร์ต (THB)", val: isLoadingPrices ? "Loading..." : `฿${fmt(portValueTHB)}`,  sub: isLoadingPrices ? "" : `P&L: ${portPnL >= 0 ? "+" : ""}$${fmt(portPnL, 2)}`, badge: isLoadingPrices ? "..." : `${portPnL >= 0 ? "+" : ""}${((portPnL / (portCost || 1)) * 100).toFixed(1)}%`, btype: portPnL >= 0 ? "badge-green" : "badge-red", accent: "#a78bfa" },
+          { label: "NET WORTH",        val: isLoadingPrices ? "Loading..." : `฿${fmt(netWorth)}`,       sub: "ทรัพย์สินสุทธิ", badge: "Live", btype: "badge-green", accent: "#05e29c" },
+          { label: "เงินฝาก (CASH)",    val: `฿${fmt(bankBalance)}`,                                     sub: "เงินใช้ได้", badge: "สภาพคล่อง", btype: "badge-blue", accent: "#4b8fff" },
+          { label: "มูลค่าพอร์ต (THB)", val: isLoadingPrices ? "Loading..." : `฿${fmt(portValueTHB)}`, sub: isLoadingPrices ? "" : `P&L: ${portPnL >= 0 ? "+" : ""}$${fmt(portPnL, 2)}`, badge: isLoadingPrices ? "..." : `${portPnL >= 0 ? "+" : ""}${((portPnL / (portCost || 1)) * 100).toFixed(1)}%`, btype: portPnL >= 0 ? "badge-green" : "badge-red", accent: "#a78bfa" },
+          { label: "รายจ่ายเดือนนี้",      val: `฿${fmt(expense)}`,                                       sub: `รายรับเดือนนี้: ฿${fmt(income)}`, badge: expense > 30000 ? "เกินงบ" : "ในงบ", btype: expense > 30000 ? "badge-red" : "badge-green", accent: expense > 30000 ? "#ff3d6b" : "#ffbe3d" },
         ].map((m, i) => (
           <div key={i} className="card metric-card" style={{ "--accent": m.accent }}>
             <div className="card-glow" style={{ "--accent": m.accent, background: `radial-gradient(circle, ${m.accent} 0%, transparent 70%)` }} />
@@ -1193,16 +1193,25 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
 
   return (
     <div className="gap-16">
-      <div className="grid-3">
+      {/* SUMMARY */}
+      <div className="grid-4">
         <div className="card metric-card" style={{ "--accent": "#a78bfa" }}>
           <div className="card-glow" />
           <div className="card-title">มูลค่าพอร์ตรวม (THB)</div>
           <div className="metric-val" style={{ fontSize: isLoadingPrices ? "18px" : undefined }}>{isLoadingPrices ? "กำลังโหลด..." : `฿${fmt(totalVal)}`}</div>
-          <div className="metric-sub">{isLoadingPrices ? "รอข้อมูล API..." : "ราคาตลาดปัจจุบัน"}</div>
+          <div className="metric-sub">{isLoadingPrices ? "รอข้อมูล API..." : "รวมกำไร/ขาดทุนแล้ว"}</div>
         </div>
+
+        <div className="card metric-card" style={{ "--accent": "#4b8fff" }}>
+          <div className="card-glow" />
+          <div className="card-title">เงินทุนรวม (COST)</div>
+          <div className="metric-val">฿{fmt(totalCost)}</div>
+          <div className="metric-sub">เงินลงทุนสุทธิ (ไม่รวมกำไร)</div>
+        </div>
+
         <div className="card metric-card" style={{ "--accent": totalPnL >= 0 ? "#05e29c" : "#ff3d6b" }}>
           <div className="card-glow" />
-          <div className="card-title">กำไร / ขาดทุน (UNREALIZED)</div>
+          <div className="card-title">กำไร / ขาดทุน (P&L)</div>
           <div className="metric-val" style={{ color: totalPnL >= 0 && !isLoadingPrices ? "var(--green)" : "var(--red)", fontSize: isLoadingPrices ? "18px" : undefined }}>
             {isLoadingPrices ? "กำลังโหลด..." : `${totalPnL >= 0 ? "+" : ""}฿${fmt(totalPnL)}`}
           </div>
@@ -1210,16 +1219,18 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
             {isLoadingPrices ? "..." : `${totalPnL >= 0 ? "+" : ""}${((totalPnL / (totalCost || 1)) * 100).toFixed(2)}%`}
           </div>
         </div>
+
         <div className="card metric-card" style={{ "--accent": "#ffbe3d" }}>
           <div className="card-glow" />
-          <div className="card-title">USD / THB RATE (DIME!)</div>
+          <div className="card-title">USD/THB RATE</div>
           <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "4px" }}>
             <span style={{ fontSize: "26px", fontWeight: 700, fontFamily: "var(--font-head)", color: "var(--gold)" }}>฿</span>
             <input type="number" step="0.01" value={exchangeRate} onChange={e => setExchangeRate(parseFloat(e.target.value) || 0)} className="exchange-input" />
           </div>
-          <div className="metric-sub">แก้ค่าเงินปัจจุบัน (Auto-Sync)</div>
+          <div className="metric-sub">ค่าเงินปัจจุบัน (Auto-Sync)</div>
         </div>
       </div>
+
 
       <div className="card">
         <div className="card-title">ราคาตลาด REAL-TIME · FINNHUB {isLoadingPrices && "⏳ กำลังอัปเดต..."}</div>
