@@ -1220,16 +1220,35 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
           </div>
         </div>
 
-        <div className="card metric-card" style={{ "--accent": "#ffbe3d" }}>
+                <div className="card metric-card" style={{ "--accent": "#ffbe3d" }}>
           <div className="card-glow" />
-          <div className="card-title">USD/THB RATE</div>
+          <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>USD/THB RATE</span>
+            {/* 🔄 ดึงค่าเงินทันที */}
+            <button 
+              onClick={async (e) => {
+                const btn = e.currentTarget;
+                btn.style.opacity = "0.5";
+                btn.innerText = "⏳";
+                try {
+                  const res = await fetch("https://open.er-api.com/v6/latest/USD");
+                  const data = await res.json();
+                  if (data?.rates?.THB) setExchangeRate(data.rates.THB);
+                } catch(e) {}
+                setTimeout(() => { btn.style.opacity = "1"; btn.innerText = "🔄"; }, 500);
+              }} 
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: "12px", filter: "grayscale(100%) brightness(200%)" }}
+              title="ดึงค่าล่าสุด"
+            >
+              🔄
+            </button>
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "4px" }}>
             <span style={{ fontSize: "26px", fontWeight: 700, fontFamily: "var(--font-head)", color: "var(--gold)" }}>฿</span>
             <input type="number" step="0.01" value={exchangeRate} onChange={e => setExchangeRate(parseFloat(e.target.value) || 0)} className="exchange-input" />
           </div>
-          <div className="metric-sub">ค่าเงินปัจจุบัน (Auto-Sync)</div>
+          <div className="metric-sub">ดึงค่าล่าสุดเมื่อสลับหน้าจอ (หรือกด 🔄)</div>
         </div>
-      </div>
 
 
       <div className="card">
@@ -1462,25 +1481,45 @@ export default function App() {
     return () => unsub();
   }, [user]);
 
+    // 🌐 ระบบดึงเรทเงินอัจฉริยะ (Focus-based Sync + 15 Min Freshness)
   useEffect(() => {
+    let lastFetchTime = 0;
+    const FRESHNESS_LIMIT = 15 * 60 * 1000; // 15 นาที (หน่วยเป็นมิลลิวินาที)
+
     async function fetchLiveExchangeRate() {
+      const now = Date.now();
+      // 🛡️ ถ้าเพิ่งดึงไปไม่ถึง 15 นาที ไม่ต้องยิง API ซ้ำให้เปลือง
+      if (now - lastFetchTime < FRESHNESS_LIMIT && lastFetchTime !== 0) return;
+
       if (!user) return;
       try {
         const res = await fetch("https://open.er-api.com/v6/latest/USD");
         const data = await res.json();
         if (data && data.rates && data.rates.THB) {
           const liveRate = parseFloat(data.rates.THB) || 32.54;
-          setExchangeRate(liveRate);
-          setDoc(doc(db, "users", user), { exchangeRate: liveRate }, { merge: true });
+          setExchangeRate(liveRate); // บันทึกลง State + Firebase อัตโนมัติ
+          lastFetchTime = Date.now(); // จดเวลาไว้ว่าดึงสำเร็จตอนไหน
         }
       } catch (err) {
         console.error("ดึงค่าเงินอัตโนมัติไม่สำเร็จ:", err);
       }
     }
+
+    // 1. ดึงทันทีที่เปิดแอป 1 รอบ
     fetchLiveExchangeRate();
-    const interval = setInterval(fetchLiveExchangeRate, 3600000);
-    return () => clearInterval(interval);
+
+    // 2. ⚡ ทีเด็ด: สั่งให้ดึงใหม่ "ทุกครั้งที่พี่สลับหน้าจอหรือแท็บกลับมาดูแอป"
+    window.addEventListener('focus', fetchLiveExchangeRate);
+
+    // 3. ป้องกันเหนียว: ถ้าเปิดค้างหน้าจอทิ้งไว้ ก็ให้เช็คทุกๆ 30 นาที
+    const interval = setInterval(fetchLiveExchangeRate, 1800000);
+
+    return () => {
+      window.removeEventListener('focus', fetchLiveExchangeRate);
+      clearInterval(interval);
+    };
   }, [user]);
+
 
   useEffect(() => {
     if (!user || portfolio.length === 0) {
