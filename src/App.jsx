@@ -1453,39 +1453,63 @@ export default function App() {
   const [livePrices, setLivePrices] = useState({ ...MOCK_PRICES, ...MOCK_CRYPTO });
   const [isLoadingPrices, setIsLoadingPrices] = useState(true);
 
-  useEffect(() => { localStorage.setItem("tw_tab", activeTab); }, [activeTab]);
+    useEffect(() => { localStorage.setItem("tw_tab", activeTab); }, [activeTab]);
 
-    // 🌐 ระบบดึงเรทเงิน USD -> THB อัตโนมัติแบบเรียลไทม์
+  // 🔥 โค้ดที่หายไป: ระบบดึงข้อมูลจาก Firebase (รายรับรายจ่าย, พอร์ตหุ้น)
+  useEffect(() => {
+    if (!user) return;
+    setLoading(true);
+    const unsub = onSnapshot(doc(db, "users", user), (res) => {
+      if (res.exists()) {
+        const data = res.data();
+        setTxs(data.txs || []);
+        setPortfolio(data.portfolio || []);
+        setExchangeRate(data.exchangeRate || 32.54);
+      }
+      setLoading(false); // <--- อันนี้แหละที่หายไป มันเลยโหลดไม่หยุด!
+    });
+    return () => unsub();
+  }, [user]);
+
+  // 🌐 โค้ดใหม่: ระบบดึงเรทเงิน USD -> THB อัตโนมัติแบบเรียลไทม์
   useEffect(() => {
     async function fetchLiveExchangeRate() {
-      if (!user) return; // ถ้ายังไม่ล็อกอิน ให้ข้ามไปก่อน
-      
+      if (!user) return;
       try {
-        // ดึงข้อมูลเรทเงินล่าสุดจาก API กลางฟรี (อัปเดตทุกวัน)
         const res = await fetch("https://open.er-api.com/v6/latest/USD");
         const data = await res.json();
-        
         if (data && data.rates && data.rates.THB) {
           const liveRate = data.rates.THB;
-          
-          // 1. อัปเดตตัวเลขในแอปให้เป็นเรทปัจจุบันทันที
           setExchangeRate(liveRate);
-          
-          // 2. บันทึกเรทล่าสุดกลับไปที่ Firebase ด้วย 
           setDoc(doc(db, "users", user), { exchangeRate: liveRate }, { merge: true });
         }
       } catch (err) {
         console.error("ดึงค่าเงินอัตโนมัติไม่สำเร็จ:", err);
       }
     }
-    
-    // สั่งให้ดึงค่าเงิน 1 ครั้งตอนเปิดแอป
     fetchLiveExchangeRate();
-    
-    // ตั้งเวลาให้ดึงค่าเงินอัปเดตใหม่ทุกๆ 1 ชั่วโมง (กรณีเปิดแอปค้างไว้)
     const interval = setInterval(fetchLiveExchangeRate, 3600000);
     return () => clearInterval(interval);
   }, [user]);
+
+  // 📈 โค้ดเดิม: ระบบดึงราคาหุ้นจาก Finnhub
+  useEffect(() => {
+    if (!user) return;
+    const API_KEY = "d7sandpr01qorsvi1jagd7sandpr01qorsvi1jb0";
+    const symbolsToFetch = ["VOO", "NVDA", "GOOG"];
+    Promise.all(symbolsToFetch.map(sym =>
+      fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${API_KEY}`)
+        .then(r => r.json())
+        .then(d => ({ symbol: sym, price: d.c || 0 }))
+        .catch(() => ({ symbol: sym, price: 0 }))
+    )).then(results => {
+      const newLive = {};
+      results.forEach(r => { if (r.price > 0) newLive[r.symbol] = r; });
+      setLivePrices(prev => ({ ...prev, ...newLive }));
+      setIsLoadingPrices(false);
+    });
+  }, [user, portfolio]);
+
 
   useEffect(() => {
     if (!user) return;
@@ -1650,4 +1674,5 @@ export default function App() {
     </>
   );
 }
+
 
