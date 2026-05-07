@@ -1455,22 +1455,36 @@ export default function App() {
 
   useEffect(() => { localStorage.setItem("tw_tab", activeTab); }, [activeTab]);
 
+    // 🌐 ระบบดึงเรทเงิน USD -> THB อัตโนมัติแบบเรียลไทม์
   useEffect(() => {
-    if (!user) return;
-    setLoading(true);
-    const unsub = onSnapshot(doc(db, "users", user), (res) => {
-      if (res.exists()) {
-        const data = res.data();
-        setTxs(data.txs || []);
-        setPortfolio(data.portfolio || []);
-        setExchangeRate(data.exchangeRate || 32.54);
-      } else {
-        const initial = { txs: INITIAL_TXS, portfolio: INITIAL_PORTFOLIO, exchangeRate: 32.54 };
-        setDoc(doc(db, "users", user), initial);
+    async function fetchLiveExchangeRate() {
+      if (!user) return; // ถ้ายังไม่ล็อกอิน ให้ข้ามไปก่อน
+      
+      try {
+        // ดึงข้อมูลเรทเงินล่าสุดจาก API กลางฟรี (อัปเดตทุกวัน)
+        const res = await fetch("https://open.er-api.com/v6/latest/USD");
+        const data = await res.json();
+        
+        if (data && data.rates && data.rates.THB) {
+          const liveRate = data.rates.THB;
+          
+          // 1. อัปเดตตัวเลขในแอปให้เป็นเรทปัจจุบันทันที
+          setExchangeRate(liveRate);
+          
+          // 2. บันทึกเรทล่าสุดกลับไปที่ Firebase ด้วย 
+          setDoc(doc(db, "users", user), { exchangeRate: liveRate }, { merge: true });
+        }
+      } catch (err) {
+        console.error("ดึงค่าเงินอัตโนมัติไม่สำเร็จ:", err);
       }
-      setLoading(false);
-    });
-    return () => unsub();
+    }
+    
+    // สั่งให้ดึงค่าเงิน 1 ครั้งตอนเปิดแอป
+    fetchLiveExchangeRate();
+    
+    // ตั้งเวลาให้ดึงค่าเงินอัปเดตใหม่ทุกๆ 1 ชั่วโมง (กรณีเปิดแอปค้างไว้)
+    const interval = setInterval(fetchLiveExchangeRate, 3600000);
+    return () => clearInterval(interval);
   }, [user]);
 
   useEffect(() => {
