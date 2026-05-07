@@ -674,7 +674,12 @@ function guessCategory(text) {
   return "other";
 }
 
-function fmt(n, dec = 0) { return (n || 0).toLocaleString("th-TH", { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
+function fmt(n, dec = 0) { 
+  const val = parseFloat(n);
+  if (isNaN(val)) return (0).toLocaleString("th-TH", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  return val.toLocaleString("th-TH", { minimumFractionDigits: dec, maximumFractionDigits: dec }); 
+}
+
 
 // ============================================================
 // MINI COMPONENTS
@@ -1150,23 +1155,37 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
   const [cost, setCost] = useState("");
   const [exch, setExch] = useState("US");
 
-  function addHolding() {
+    function addHolding() {
     if (!symbol || !shares || !cost) return;
+    
+    // ล้างตัวอักษรที่พิมพ์ผิดมา (เช่น THB) ให้เหลือแต่ตัวเลข
+    const cleanShares = shares.toString().replace(/[^0-9.]/g, '');
+    const cleanCost = cost.toString().replace(/[^0-9.]/g, '');
+    
+    const numShares = parseFloat(cleanShares);
+    const numCost = parseFloat(cleanCost);
+
+    if (isNaN(numShares) || isNaN(numCost)) {
+      alert("กรุณากรอกตัวเลขเท่านั้นครับ!");
+      return;
+    }
+
     const symUpper = symbol.toUpperCase();
     setPortfolio(prev => {
       const existing = prev.find(p => p.symbol === symUpper);
       if (existing) {
-        const totalCostBefore = existing.shares * existing.avgCost;
-        const totalCostAdded  = parseFloat(shares) * parseFloat(cost);
-        const newShares       = existing.shares + parseFloat(shares);
+        const totalCostBefore = parseFloat(existing.shares) * parseFloat(existing.avgCost);
+        const totalCostAdded  = numShares * numCost;
+        const newShares       = parseFloat(existing.shares) + numShares;
         const newAvgCost      = (totalCostBefore + totalCostAdded) / newShares;
         return prev.map(p => p.symbol === symUpper ? { ...p, shares: newShares, avgCost: newAvgCost } : p);
       } else {
-        return [...prev, { symbol: symUpper, shares: parseFloat(shares), avgCost: parseFloat(cost), exchange: exch }];
+        return [...prev, { symbol: symUpper, shares: numShares, avgCost: numCost, exchange: exch }];
       }
     });
     setSymbol(""); setShares(""); setCost("");
   }
+
 
   function deleteHolding(sym) {
     if (window.confirm(`ต้องการลบหุ้น ${sym} ออกจากพอร์ตใช่หรือไม่?`)) {
@@ -1455,7 +1474,6 @@ export default function App() {
 
     useEffect(() => { localStorage.setItem("tw_tab", activeTab); }, [activeTab]);
 
-  // 🔥 โค้ดที่หายไป: ระบบดึงข้อมูลจาก Firebase (รายรับรายจ่าย, พอร์ตหุ้น)
   useEffect(() => {
     if (!user) return;
     setLoading(true);
@@ -1464,12 +1482,15 @@ export default function App() {
         const data = res.data();
         setTxs(data.txs || []);
         setPortfolio(data.portfolio || []);
-        setExchangeRate(data.exchangeRate || 32.54);
+        // 🛡️ ป้องกัน NaN: กรองตัวหนังสือออกจากค่าเงินให้อัตโนมัติ
+        const rawRate = parseFloat(data.exchangeRate);
+        setExchangeRate(!isNaN(rawRate) ? rawRate : 32.54);
       }
-      setLoading(false); // <--- อันนี้แหละที่หายไป มันเลยโหลดไม่หยุด!
+      setLoading(false);
     });
     return () => unsub();
   }, [user]);
+
 
   // 🌐 โค้ดใหม่: ระบบดึงเรทเงิน USD -> THB อัตโนมัติแบบเรียลไทม์
   useEffect(() => {
@@ -1661,4 +1682,5 @@ export default function App() {
     </>
   );
 }
+
 
