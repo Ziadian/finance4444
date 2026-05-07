@@ -28,7 +28,6 @@ const AUTHORIZED_USERS = {
 // ============================================================
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne+Mono&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap');
-
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
@@ -71,7 +70,8 @@ const styles = `
   }
   body::before {
     content: '';
-    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    position: fixed; inset: 0; z-index: 0;
+    pointer-events: none;
     background:
       radial-gradient(ellipse 80% 50% at 10% 0%, rgba(75,143,255,0.07) 0%, transparent 70%),
       radial-gradient(ellipse 60% 40% at 90% 100%, rgba(5,226,156,0.05) 0%, transparent 70%);
@@ -82,7 +82,8 @@ const styles = `
      ✨ LOGIN PAGE
      ============================================= */
   .login-wrapper {
-    height: 100vh; display: flex; align-items: center; justify-content: center;
+    height: 100vh;
+    display: flex; align-items: center; justify-content: center;
     background: var(--bg); position: relative; overflow: hidden;
   }
   .login-glow-1 {
@@ -124,7 +125,8 @@ const styles = `
   .login-logo {
     width: 56px; height: 56px;
     background: linear-gradient(135deg, var(--green), var(--blue));
-    border-radius: 16px; display: flex; align-items: center; justify-content: center;
+    border-radius: 16px; display: flex;
+    align-items: center; justify-content: center;
     font-family: var(--font-head); font-size: 22px; font-weight: 700; color: #000;
     box-shadow: 0 8px 24px rgba(5,226,156,0.3);
     flex-shrink: 0;
@@ -149,7 +151,8 @@ const styles = `
   }
   .login-inp-styled::placeholder { color: var(--text3); }
   .login-btn-styled {
-    width: 100%; padding: 15px; margin-top: 8px; border-radius: 12px; border: none;
+    width: 100%; padding: 15px; margin-top: 8px;
+    border-radius: 12px; border: none;
     background: linear-gradient(135deg, var(--green2), var(--blue2));
     color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
     font-family: var(--font-head); letter-spacing: 0.03em;
@@ -180,7 +183,8 @@ const styles = `
   .topnav-logo {
     width: 36px; height: 36px;
     background: linear-gradient(135deg, var(--green), var(--blue));
-    border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    border-radius: 10px; display: flex;
+    align-items: center; justify-content: center;
     font-family: var(--font-head); font-weight: 700; font-size: 13px; color: #000;
     box-shadow: 0 4px 12px rgba(5,226,156,0.25);
     flex-shrink: 0;
@@ -389,8 +393,7 @@ const styles = `
     position: relative; overflow: hidden;
   }
   .progress-fill::after {
-    content: '';
-    position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+    content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
     animation: shimmer 2s ease-in-out infinite;
   }
@@ -433,35 +436,28 @@ const styles = `
 
   .btn {
     padding: 11px 20px; border-radius: 11px; border: none;
-    font-size: 13px; font-family: var(--font-head); cursor: pointer;
-    font-weight: 600; transition: all 0.15s; white-space: nowrap;
+    font-size: 13px; font-family: var(--font-head);
+    cursor: pointer; font-weight: 600; transition: all 0.15s; white-space: nowrap;
     letter-spacing: -0.01em;
   }
   .btn:hover { transform: translateY(-1px); }
   .btn:active { transform: translateY(0); }
   .btn-green {
     background: linear-gradient(135deg, var(--green2), #009966);
-    color: #000;
-    box-shadow: 0 4px 14px rgba(5,226,156,0.2);
+    color: #000; box-shadow: 0 4px 14px rgba(5,226,156,0.2);
   }
   .btn-green:hover { box-shadow: 0 6px 20px rgba(5,226,156,0.35); }
   .btn-blue {
     background: linear-gradient(135deg, var(--blue), var(--blue2));
-    color: #fff;
-    box-shadow: 0 4px 14px rgba(75,143,255,0.2);
+    color: #fff; box-shadow: 0 4px 14px rgba(75,143,255,0.2);
   }
   .btn-blue:hover { box-shadow: 0 6px 20px rgba(75,143,255,0.35); }
-  .btn-ghost {
-    background: rgba(255,255,255,0.05);
-    color: var(--text);
-    border: 1px solid var(--border2);
-  }
+  .btn-ghost { background: rgba(255,255,255,0.05); color: var(--text); border: 1px solid var(--border2); }
   .btn-ghost:hover { background: rgba(255,255,255,0.08); border-color: var(--border3); }
   .btn-ghost.active { background: rgba(255,255,255,0.09); border-color: var(--border3); }
   .btn-red {
     background: linear-gradient(135deg, var(--red), var(--red2));
-    color: #fff;
-    box-shadow: 0 4px 14px rgba(255,61,107,0.2);
+    color: #fff; box-shadow: 0 4px 14px rgba(255,61,107,0.2);
   }
   .btn-action {
     background: none; border: none; cursor: pointer;
@@ -480,26 +476,20 @@ const styles = `
     border-radius: 12px; color: var(--text) !important;
     font-size: 12px; font-family: var(--font-mono);
     resize: vertical; outline: none; -webkit-appearance: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    line-height: 1.7;
+    transition: border-color 0.2s, box-shadow 0.2s; line-height: 1.7;
   }
-  .sms-box:focus {
-    border-color: rgba(75,143,255,0.4);
-    box-shadow: 0 0 0 3px rgba(75,143,255,0.08);
-  }
+  .sms-box:focus { border-color: rgba(75,143,255,0.4); box-shadow: 0 0 0 3px rgba(75,143,255,0.08); }
   .sms-example {
     padding: 12px 16px; background: rgba(255,255,255,0.03);
-    border-radius: 10px; margin-bottom: 8px;
-    cursor: pointer; font-size: 11px; font-family: var(--font-mono); color: var(--text2);
+    border-radius: 10px; margin-bottom: 8px; cursor: pointer; font-size: 11px;
+    font-family: var(--font-mono); color: var(--text2);
     border: 1px solid var(--border); line-height: 1.7;
     transition: background 0.15s, border-color 0.15s;
   }
   .sms-example:hover { background: rgba(75,143,255,0.05); border-color: rgba(75,143,255,0.2); color: var(--text); }
   .parse-result {
     margin-top: 16px; padding: 18px;
-    background: rgba(5,226,156,0.04);
-    border: 1px solid rgba(5,226,156,0.2);
-    border-radius: 14px;
+    background: rgba(5,226,156,0.04); border: 1px solid rgba(5,226,156,0.2); border-radius: 14px;
   }
   .parse-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; }
   .parse-key { color: var(--text2); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -520,10 +510,9 @@ const styles = `
      ============================================= */
   .tag {
     display: inline-block; padding: 3px 9px; border-radius: 6px;
-    font-size: 10px; font-family: var(--font-mono); font-weight: 700;
-    letter-spacing: 0.03em;
+    font-size: 10px; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.03em;
   }
-  .tag-income  { background: rgba(5,226,156,0.12);  color: var(--green);  border: 1px solid rgba(5,226,156,0.2); }
+  .tag-income  { background: rgba(5,226,156,0.12); color: var(--green);  border: 1px solid rgba(5,226,156,0.2); }
   .tag-expense { background: rgba(255,61,107,0.12); color: var(--red);    border: 1px solid rgba(255,61,107,0.2); }
   .tag-invest  { background: rgba(75,143,255,0.12); color: var(--blue);   border: 1px solid rgba(75,143,255,0.2); }
   .tag-fix     { background: rgba(167,139,250,0.12); color: var(--purple); border: 1px solid rgba(167,139,250,0.2); }
@@ -536,27 +525,18 @@ const styles = `
      ============================================= */
   .alert {
     padding: 13px 18px; border-radius: 12px; margin-bottom: 14px;
-    font-size: 13px; display: flex; align-items: flex-start; gap: 10px;
-    font-family: var(--font-head);
+    font-size: 13px; display: flex; align-items: flex-start; gap: 10px; font-family: var(--font-head);
   }
-  .alert-warning {
-    background: rgba(255,190,61,0.06);
-    border: 1px solid rgba(255,190,61,0.2); color: var(--gold);
-  }
-  .alert-info {
-    background: rgba(75,143,255,0.06);
-    border: 1px solid rgba(75,143,255,0.2); color: var(--blue);
-  }
+  .alert-warning { background: rgba(255,190,61,0.06); border: 1px solid rgba(255,190,61,0.2); color: var(--gold); }
+  .alert-info { background: rgba(75,143,255,0.06); border: 1px solid rgba(75,143,255,0.2); color: var(--blue); }
 
   /* =============================================
      🔢 EXCHANGE RATE INPUT
      ============================================= */
   .exchange-input {
-    background: transparent; border: none;
-    border-bottom: 1px dashed rgba(255,255,255,0.2);
+    background: transparent; border: none; border-bottom: 1px dashed rgba(255,255,255,0.2);
     color: var(--text); font-size: 26px; font-weight: 700;
-    font-family: var(--font-head); letter-spacing: -0.03em;
-    width: 110px; outline: none; text-align: left;
+    font-family: var(--font-head); letter-spacing: -0.03em; width: 110px; outline: none; text-align: left;
     transition: border-color 0.15s;
   }
   .exchange-input:focus { border-bottom-color: var(--blue); color: var(--blue); }
@@ -579,8 +559,7 @@ const styles = `
   }
   .loading-spinner {
     width: 36px; height: 36px; border-radius: 50%;
-    border: 2px solid var(--border2);
-    border-top-color: var(--green);
+    border: 2px solid var(--border2); border-top-color: var(--green);
     animation: spin 0.8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -596,7 +575,7 @@ const styles = `
 `;
 
 // ============================================================
-// MOCK DATA (ต้นฉบับ 100%)
+// MOCK DATA
 // ============================================================
 const MOCK_PRICES = {
   VOO: { price: 662.42, change: -0.18, pct: -0.03, name: "Vanguard S&P 500" },
@@ -620,10 +599,6 @@ const CATEGORIES = {
   income:    { label: "รายรับ",    icon: "💰", color: "#05e29c" },
   other:     { label: "อื่นๆ",     icon: "💸", color: "#7b85a0" },
 };
-
-const INITIAL_TXS = [];
-const INITIAL_PORTFOLIO = [];
-
 const BUDGETS = [
   { cat: "food",      limit: 1500 },
   { cat: "transport", limit: 2000 },
@@ -641,6 +616,7 @@ function parseMakeSMS(sms) {
   const dateMatch = text.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
   const refMatch = text.match(/(?:ที่|จาก|ไปยัง|to|from|Ref)[:\s]*([^\n]+)/i);
   const balMatch = text.match(/(?:คงเหลือ|Balance|ยอด)[:\s:]*(\d[\d,\.]+)/i);
+
   if (amtMatch) {
     result.valid = true;
     result.amount = parseFloat(amtMatch[1].replace(/,/g, ""));
@@ -653,7 +629,8 @@ function parseMakeSMS(sms) {
     } else if (incomeMatch) {
       result.type = "income"; result.direction = "+"; result.cat = "income";
     } else {
-      result.type = "expense"; result.direction = "-"; result.cat = guessCategory(refMatch ? refMatch[1] : text);
+      result.type = "expense"; result.direction = "-";
+      result.cat = guessCategory(refMatch ? refMatch[1] : text);
     }
     result.date = dateMatch ? `${dateMatch[3].length === 2 ? "20" + dateMatch[3] : dateMatch[3]}-${String(dateMatch[2]).padStart(2, "0")}-${String(dateMatch[1]).padStart(2, "0")}` : new Date().toISOString().slice(0, 10);
     result.merchant = refMatch ? refMatch[1].trim().slice(0, 40) : (investMatch ? "Invest Transaction" : "MAKE by KBank Transaction");
@@ -677,9 +654,8 @@ function guessCategory(text) {
 function fmt(n, dec = 0) { 
   const val = parseFloat(n);
   if (isNaN(val)) return (0).toLocaleString("th-TH", { minimumFractionDigits: dec, maximumFractionDigits: dec });
-  return val.toLocaleString("th-TH", { minimumFractionDigits: dec, maximumFractionDigits: dec }); 
+  return val.toLocaleString("th-TH", { minimumFractionDigits: dec, maximumFractionDigits: dec });
 }
-
 
 // ============================================================
 // MINI COMPONENTS
@@ -692,9 +668,12 @@ function DonutChart({ data, size = 140 }) {
   const cx = size / 2, cy = size / 2, r = size * 0.38, inner = size * 0.25;
   function slice(s, p) {
     if (p === 1) return `M ${cx} ${cy - r} A ${r} ${r} 0 1 1 ${cx} ${cy + r} A ${r} ${r} 0 1 1 ${cx} ${cy - r} Z`;
-    const a1 = s * 2 * Math.PI - Math.PI / 2; const a2 = (s + p) * 2 * Math.PI - Math.PI / 2;
-    const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1); const x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
-    const ix1 = cx + inner * Math.cos(a1), iy1 = cy + inner * Math.sin(a1); const ix2 = cx + inner * Math.cos(a2), iy2 = cy + inner * Math.sin(a2);
+    const a1 = s * 2 * Math.PI - Math.PI / 2;
+    const a2 = (s + p) * 2 * Math.PI - Math.PI / 2;
+    const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+    const x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
+    const ix1 = cx + inner * Math.cos(a1), iy1 = cy + inner * Math.sin(a1);
+    const ix2 = cx + inner * Math.cos(a2), iy2 = cy + inner * Math.sin(a2);
     const lg = p > 0.5 ? 1 : 0;
     return `M ${ix1} ${iy1} L ${x1} ${y1} A ${r} ${r} 0 ${lg} 1 ${x2} ${y2} L ${ix2} ${iy2} A ${inner} ${inner} 0 ${lg} 0 ${ix1} ${iy1} Z`;
   }
@@ -718,9 +697,7 @@ function MiniBarChart({ values, color = "#4b8fff", height = 50 }) {
         <div key={i} style={{
           flex: 1,
           height: `${(v / max) * 100}%`,
-          background: i === values.length - 1
-            ? `linear-gradient(to top, ${color}, ${color}cc)`
-            : `${color}40`,
+          background: i === values.length - 1 ? `linear-gradient(to top, ${color}, ${color}cc)` : `${color}40`,
           borderRadius: "4px 4px 0 0",
           minHeight: 3,
           transition: "height 0.4s ease",
@@ -736,12 +713,10 @@ function MiniBarChart({ values, color = "#4b8fff", height = 50 }) {
 function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices, exchangeRate }) {
   const safeRate = parseFloat(exchangeRate) || 32.54;
   const thisMonth = txs.filter(t => t.date && t.date.startsWith(new Date().toISOString().slice(0, 7)));
-  
   const income = txs.filter(t => (parseFloat(t.amount) || 0) > 0).reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
   const expense = txs.filter(t => (parseFloat(t.amount) || 0) < 0).reduce((s, t) => s + Math.abs(parseFloat(t.amount) || 0), 0);
   const saving = income - expense;
   const savingRate = income > 0 ? (saving / income) * 100 : 0;
-  
   const portValue = portfolio.reduce((s, p) => { 
     const px = parseFloat(livePrices[p.symbol]?.price || p.avgCost) || 0; 
     return s + px * (parseFloat(p.shares) || 0); 
@@ -753,7 +728,6 @@ function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices, exchangeRat
   const debt = 0;
   const portValueTHB = portValue * safeRate;
   const netWorth = bankBalance + portValueTHB - debt;
-  
   const allocData = [
     { label: "เงินฝาก", value: Math.max(bankBalance, 0), color: "#4b8fff" },
     { label: "หุ้น US",  value: portValueTHB,             color: "#05e29c" },
@@ -769,10 +743,10 @@ function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices, exchangeRat
         </div>
       )}
 
-            <div className="grid-4">
+      <div className="grid-4">
         {[
           { label: "NET WORTH",        val: isLoadingPrices ? "Loading..." : `฿${fmt(netWorth)}`,       sub: "ทรัพย์สินสุทธิ", badge: "Live", btype: "badge-green", accent: "#05e29c" },
-          { label: "เงินฝาก (CASH)",    val: `฿${fmt(bankBalance)}`,                                     sub: "เงินใช้ได้", badge: "สภาพคล่อง", btype: "badge-blue", accent: "#4b8fff" },
+          { label: "เงินฝาก (CASH)",    val: `฿${fmt(bankBalance)}`,                                     sub: "เงินพร้อมใช้ (MAKE)", badge: "สภาพคล่อง", btype: "badge-blue", accent: "#4b8fff" },
           { label: "มูลค่าพอร์ต (THB)", val: isLoadingPrices ? "Loading..." : `฿${fmt(portValueTHB)}`, sub: isLoadingPrices ? "" : `P&L: ${portPnL >= 0 ? "+" : ""}$${fmt(portPnL, 2)}`, badge: isLoadingPrices ? "..." : `${portPnL >= 0 ? "+" : ""}${((portPnL / (portCost || 1)) * 100).toFixed(1)}%`, btype: portPnL >= 0 ? "badge-green" : "badge-red", accent: "#a78bfa" },
           { label: "รายจ่ายเดือนนี้",      val: `฿${fmt(expense)}`,                                       sub: `รายรับเดือนนี้: ฿${fmt(income)}`, badge: expense > 30000 ? "เกินงบ" : "ในงบ", btype: expense > 30000 ? "badge-red" : "badge-green", accent: expense > 30000 ? "#ff3d6b" : "#ffbe3d" },
         ].map((m, i) => (
@@ -935,7 +909,6 @@ function TransactionsTab({ txs, setTxs }) {
   const filtered = filter === "all" ? txs : filter === "income" ? txs.filter(t => t.amount > 0) : txs.filter(t => t.amount < 0);
   const totalIn  = txs.filter(t => t.amount > 0).reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
   const totalOut = txs.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(parseFloat(t.amount) || 0), 0);
-
   return (
     <div className="gap-16">
       <div className="grid-3">
@@ -1089,33 +1062,42 @@ function SmsParserTab({ setTxs, portfolio, setPortfolio, exchangeRate }) {
 
   return (
     <div className="gap-16">
-      <div className="alert alert-info">💡 คัดลอก SMS จาก MAKE มาวาง ระบบจะดึงข้อมูลอัตโนมัติ</div>
+      <div className="alert alert-info">💡 คัดลอก SMS / Notification จาก MAKE หรือแอปเทรดมาวาง แล้วกด Parse ระบบจะดึงข้อมูลอัตโนมัติ</div>
       <div className="card">
-        <div className="card-title">ตัวอย่าง SMS ที่รองรับ</div>
+        <div className="card-title">ตัวอย่าง SMS Format ที่รองรับ</div>
         {examples.map((e, i) => (
           <div key={i} className="sms-example" onClick={() => { setSms(e); setResult(null); }}>{e}</div>
         ))}
+        <div style={{ fontSize: 11, color: "var(--text3)", fontFamily: "var(--font-mono)", marginTop: 8 }}>คลิกที่ตัวอย่างเพื่อโหลดข้อความ</div>
       </div>
       <div className="card">
-        <div className="card-title">วาง SMS ตรงนี้</div>
-        <textarea className="sms-box" placeholder="วาง SMS ที่นี่..." value={sms} onChange={e => { setSms(e.target.value); setResult(null); }} />
+        <div className="card-title">วาง SMS / Notification ที่นี่</div>
+        <textarea className="sms-box" placeholder="วาง SMS จาก MAKE by KBank ที่นี่..." value={sms} onChange={e => { setSms(e.target.value); setResult(null); }} />
         <div className="row mt-12">
           <button className="btn btn-blue" onClick={parse}>🔍 Parse SMS</button>
+          <button className="btn btn-ghost" onClick={() => { setSms(""); setResult(null); }}>ล้าง</button>
         </div>
         {result && (
           <div className="parse-result mt-16">
             {result.valid ? (
               <>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--green)", marginBottom: 14, fontFamily: "var(--font-mono)" }}>✅ PARSE SUCCESS</div>
-                <div className="parse-row"><span className="parse-key">TYPE</span><span className="parse-val">{result.type === "income" ? "💰 รับ" : "💸 จ่าย"}</span></div>
-                <div className="parse-row"><span className="parse-key">AMOUNT</span><span className="parse-val">฿{fmt(result.amount, 2)}</span></div>
-                <div className="parse-row"><span className="parse-key">MERCHANT</span><span className="parse-val">{result.merchant}</span></div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--green)", marginBottom: 14, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>✅ PARSE SUCCESS</div>
+                {[
+                  ["TYPE",    result.type === "income" ? "💰 รายรับ" : "💸 รายจ่าย"],
+                  ["AMOUNT",  `${result.direction}฿${fmt(result.amount, 2)}`],
+                  ...(result.cat === "invest" && result.symbol ? [["SYMBOL", result.symbol], ["SHARES", `${result.shares || 1} หุ้น`]] : []),
+                  ["DATE",    result.date],
+                  ["MERCHANT", result.merchant],
+                  ["CATEGORY", `${CATEGORIES[result.cat]?.icon} ${CATEGORIES[result.cat]?.label}`],
+                ].map(([k, v]) => (
+                  <div key={k} className="parse-row"><span className="parse-key">{k}</span><span className="parse-val">{v}</span></div>
+                ))}
                 <div className="row mt-12">
                   <button className="btn btn-green" onClick={addToLedger} disabled={added}>{added ? "✅ เพิ่มแล้ว" : "+ บันทึกลงบัญชี"}</button>
                 </div>
               </>
             ) : (
-              <div style={{ color: "var(--red)", fontSize: 13 }}>❌ ไม่พบข้อมูลที่ Parse ได้</div>
+              <div style={{ color: "var(--red)", fontSize: 13, fontFamily: "var(--font-mono)" }}>❌ ไม่พบข้อมูลที่ Parse ได้ — ลองตรวจสอบรูปแบบ SMS</div>
             )}
           </div>
         )}
@@ -1159,6 +1141,12 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
     setSymbol(""); setShares(""); setCost("");
   }
 
+  function deleteHolding(sym) {
+    if (window.confirm(`ต้องการลบหุ้น ${sym} ออกจากพอร์ตใช่หรือไม่?`)) {
+      setPortfolio(prev => prev.filter(p => p.symbol !== sym));
+    }
+  }
+
   const rows = portfolio.map(p => {
     const px = livePrices[p.symbol];
     const currentPrice = parseFloat(px?.price || p.avgCost) || 0;
@@ -1178,61 +1166,94 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
 
   return (
     <div className="gap-16">
+      {/* SUMMARY */}
       <div className="grid-4">
         <div className="card metric-card" style={{ "--accent": "#a78bfa" }}>
+          <div className="card-glow" />
           <div className="card-title">มูลค่าพอร์ตรวม (THB)</div>
-          <div className="metric-val">฿{fmt(totalVal)}</div>
-          <div className="metric-sub">ราคาปัจจุบัน</div>
+          <div className="metric-val" style={{ fontSize: isLoadingPrices ? "18px" : undefined }}>{isLoadingPrices ? "กำลังโหลด..." : `฿${fmt(totalVal)}`}</div>
+          <div className="metric-sub">{isLoadingPrices ? "รอข้อมูล API..." : "รวมกำไร/ขาดทุนแล้ว"}</div>
         </div>
+
         <div className="card metric-card" style={{ "--accent": "#4b8fff" }}>
+          <div className="card-glow" />
           <div className="card-title">เงินทุนรวม (COST)</div>
           <div className="metric-val">฿{fmt(totalCost)}</div>
-          <div className="metric-sub">เงินต้นสุทธิ</div>
+          <div className="metric-sub">เงินลงทุนสุทธิ (ไม่รวมกำไร)</div>
         </div>
+
         <div className="card metric-card" style={{ "--accent": totalPnL >= 0 ? "#05e29c" : "#ff3d6b" }}>
-          <div className="card-title">กำไร / ขาดทุน</div>
-          <div className="metric-val" style={{ color: totalPnL >= 0 ? "var(--green)" : "var(--red)" }}>
-            ฿{fmt(totalPnL)}
+          <div className="card-glow" />
+          <div className="card-title">กำไร / ขาดทุน (P&L)</div>
+          <div className="metric-val" style={{ color: totalPnL >= 0 && !isLoadingPrices ? "var(--green)" : "var(--red)", fontSize: isLoadingPrices ? "18px" : undefined }}>
+            {isLoadingPrices ? "กำลังโหลด..." : `${totalPnL >= 0 ? "+" : ""}฿${fmt(totalPnL)}`}
           </div>
           <div className={`metric-badge ${totalPnL >= 0 ? "badge-green" : "badge-red"}`}>
-            {((totalPnL / (totalCost || 1)) * 100).toFixed(2)}%
+            {isLoadingPrices ? "..." : `${totalPnL >= 0 ? "+" : ""}${((totalPnL / (totalCost || 1)) * 100).toFixed(2)}%`}
           </div>
         </div>
+
         <div className="card metric-card" style={{ "--accent": "#ffbe3d" }}>
+          <div className="card-glow" />
           <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>USD/THB RATE</span>
+            {/* 🔄 ปุ่มกดบังคับดึงเรทเงินเองทันที */}
             <button 
               onClick={async (e) => {
-                const btn = e.currentTarget; btn.innerText = "⏳";
+                const btn = e.currentTarget;
+                btn.style.opacity = "0.5";
+                btn.innerText = "⏳";
                 try {
                   const res = await fetch("https://open.er-api.com/v6/latest/USD");
                   const data = await res.json();
                   if (data?.rates?.THB) setExchangeRate(data.rates.THB);
                 } catch(e) {}
-                btn.innerText = "🔄";
+                setTimeout(() => { btn.style.opacity = "1"; btn.innerText = "🔄"; }, 500);
               }} 
-              style={{ background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>🔄</button>
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: "12px", filter: "grayscale(100%) brightness(200%)" }}
+              title="ดึงเรทล่าสุดเดี๋ยวนี้"
+            >
+              🔄
+            </button>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "4px" }}>
-            <span style={{ fontSize: "24px", fontWeight: 700 }}>฿</span>
+            <span style={{ fontSize: "26px", fontWeight: 700, fontFamily: "var(--font-head)", color: "var(--gold)" }}>฿</span>
             <input type="number" step="0.01" value={exchangeRate} onChange={e => setExchangeRate(parseFloat(e.target.value) || 0)} className="exchange-input" />
           </div>
+          <div className="metric-sub">ดึงล่าสุดเมื่อสลับหน้าจอ (หรือกด 🔄)</div>
         </div>
       </div>
 
       <div className="card">
-        <div className="card-title">ราคาตลาด REAL-TIME</div>
+        <div className="card-title">ราคาตลาด REAL-TIME · FINNHUB {isLoadingPrices && "⏳ กำลังอัปเดต..."}</div>
         <div className="grid-3">
+          {/* เปลี่ยนจากล็อกชื่อ 3 ตัว เป็นดึงตามหุ้นที่มีในพอร์ต (ไม่ซ้ำตัว) */}
           {[...new Set(portfolio.filter(p => p.exchange !== "CRYPTO").map(p => p.symbol))].map(sym => {
             const d = livePrices[sym];
             if (!d) return null;
+            const pct = parseFloat(d.pct) || 0;
+            const change = parseFloat(d.change) || 0;
             return (
-              <div key={sym} className="card" style={{ padding: "12px", background: "rgba(255,255,255,0.03)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontWeight: 700 }}>{sym}</span>
-                  <span className={d.pct >= 0 ? "tag-green" : "tag-red"}>{d.pct?.toFixed(2)}%</span>
+              <div key={sym} style={{ padding: "16px", borderRadius: "12px", background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
+                <div className="ticker-card">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div>
+                      <div className="ticker-sym">{sym}</div>
+                      <div className="ticker-name">{d.name}</div>
+                    </div>
+                    {!isLoadingPrices && (
+                      <div className={`metric-badge ${change >= 0 ? "badge-green" : "badge-red"}`} style={{ marginTop: 0 }}>
+                        {pct >= 0 ? "+" : ""}{pct.toFixed(2)}%
+                      </div>
+                    )}
+                  </div>
+                  <div className="ticker-price">{isLoadingPrices ? "..." : `$${fmt(d.price, 2)}`}</div>
+                  {!isLoadingPrices && (
+                    <div className={`ticker-change ${change >= 0 ? "up" : "dn"}`}>
+                      {change >= 0 ? "▲" : "▼"} {Math.abs(change).toFixed(2)}
+                    </div>
+                  )}
                 </div>
-                <div style={{ fontSize: "18px", fontWeight: 700, marginTop: "4px" }}>${fmt(d.price, 2)}</div>
               </div>
             );
           })}
@@ -1240,24 +1261,46 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
       </div>
 
       <div className="card">
-        <div className="section-header"><span className="section-title">หุ้นที่ถือ</span></div>
+        <div className="section-header">
+          <span className="section-title">หุ้น Dime ที่ถือ</span>
+        </div>
         <div style={{ overflowX: "auto" }}>
           <table className="data-table">
             <thead>
-              <tr><th>ชื่อ</th><th>จำนวน</th><th>ต้นทุน</th><th>ราคาตลาด</th><th>มูลค่า (฿)</th><th>P&L</th><th>จัดการ</th></tr>
+              <tr>
+                <th>ชื่อ</th>
+                <th>Exchange</th>
+                <th className="text-right">จำนวน</th>
+                <th className="text-right">ต้นทุน/หน่วย</th>
+                <th className="text-right">ราคาปัจจุบัน</th>
+                <th className="text-right">มูลค่า (฿)</th>
+                <th className="text-right">P&L</th>
+                <th className="text-right">จัดการ</th>
+              </tr>
             </thead>
             <tbody>
+              {rows.length === 0 && (
+                <tr><td colSpan="8" style={{ textAlign: "center", color: "var(--text2)", padding: "28px", fontFamily: "var(--font-mono)", fontSize: 12 }}>ยังไม่มีหุ้นในพอร์ต</td></tr>
+              )}
               {rows.map((r, i) => (
                 <tr key={i}>
-                  <td><b>{r.symbol}</b></td>
-                  <td className="text-right">{r.shares}</td>
-                  <td className="text-right">${fmt(r.avgCost, 2)}</td>
-                  <td className="text-right">${fmt(r.currentPrice, 2)}</td>
-                  <td className="text-right">฿{fmt(r.mktVal)}</td>
-                  <td className={`text-right ${r.pnl >= 0 ? "tag-green" : "tag-red"}`}>
-                    {r.pnl >= 0 ? "+" : ""}฿{fmt(r.pnl)}<br/><small>({r.pnlPct.toFixed(1)}%)</small>
+                  <td style={{ fontFamily: "var(--font-head)", fontWeight: 700, letterSpacing: "-0.01em" }}>{r.symbol}</td>
+                  <td><span className={`tag ${r.exchange === "CRYPTO" ? "tag-gold" : "tag-blue"}`}>{r.exchange}</span></td>
+                  <td className="text-right text-mono">{r.shares}</td>
+                  <td className="text-right text-mono">${fmt(r.avgCost, 2)}</td>
+                  <td className="text-right text-mono">{isLoadingPrices ? "..." : `$${fmt(r.currentPrice, 2)}`}</td>
+                  <td className="text-right" style={{ fontFamily: "var(--font-head)", fontWeight: 600 }}>{isLoadingPrices ? "..." : `฿${fmt(r.mktVal)}`}</td>
+                  <td className="text-right" style={{ fontFamily: "var(--font-head)", fontWeight: 700, color: r.pnl >= 0 && !isLoadingPrices ? "var(--green)" : "var(--red)" }}>
+                    {isLoadingPrices ? "..." : (
+                      <>
+                        {r.pnl >= 0 ? "+" : ""}฿{fmt(r.pnl)}<br />
+                        <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 400 }}>({r.pnl >= 0 ? "+" : ""}{parseFloat(r.pnlPct || 0).toFixed(1)}%)</span>
+                      </>
+                    )}
                   </td>
-                  <td className="text-right"><button onClick={() => setPortfolio(portfolio.filter((_, idx) => idx !== i))}>🗑️</button></td>
+                  <td className="text-right">
+                    <button className="btn-action" onClick={() => deleteHolding(r.symbol)} title="ลบ">🗑️</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -1266,11 +1309,15 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
       </div>
 
       <div className="card">
-        <div className="card-title">เพิ่มพอร์ตหุ้น</div>
+        <div className="card-title">เพิ่ม / แก้ไข Portfolio (ใส่หุ้นเดิมเพื่อถัวเฉลี่ย)</div>
         <div className="input-row">
-          <input className="inp" placeholder="Symbol" value={symbol} onChange={e => setSymbol(e.target.value)} />
-          <input className="inp" type="number" placeholder="จำนวน" value={shares} onChange={e => setShares(e.target.value)} />
-          <input className="inp" type="number" placeholder="ต้นทุน (USD)" value={cost} onChange={e => setCost(e.target.value)} />
+          <input className="inp" placeholder="Symbol (เช่น AAPL, BTC)" value={symbol} onChange={e => setSymbol(e.target.value)} />
+          <input className="inp" type="number" placeholder="จำนวนหุ้น / เหรียญ" value={shares} onChange={e => setShares(e.target.value)} />
+          <input className="inp" type="number" placeholder="ต้นทุนต่อหน่วย (USD)" value={cost} onChange={e => setCost(e.target.value)} />
+          <select className="inp" value={exch} onChange={e => setExch(e.target.value)}>
+            <option value="US">🇺🇸 US</option>
+            <option value="CRYPTO">₿ Crypto</option>
+          </select>
           <button className="btn btn-blue" onClick={addHolding}>+ เพิ่ม</button>
         </div>
       </div>
@@ -1279,14 +1326,99 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
 }
 
 function BudgetTab({ txs }) {
-  return <div className="card">ระบบงบประมาณและคาดการณ์ (กำลังพัฒนา)</div>;
+  const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย."];
+  const actuals = [0, 0, 0, 0, 0];
+  const forecast = [0, 0, 0, 0, 0, 0];
+  const spent = {};
+  txs.filter(t => (parseFloat(t.amount) || 0) < 0 && t.date && t.date.startsWith(new Date().toISOString().slice(0, 7))).forEach(t => {
+    spent[t.cat] = (spent[t.cat] || 0) + Math.abs(parseFloat(t.amount) || 0);
+  });
+  const fixCost = txs.filter(t => t.type === "fix" && (parseFloat(t.amount) || 0) < 0).reduce((s, t) => s + Math.abs(parseFloat(t.amount) || 0), 0);
+  const varCost = txs.filter(t => t.type === "var" && (parseFloat(t.amount) || 0) < 0).reduce((s, t) => s + Math.abs(parseFloat(t.amount) || 0), 0);
+  
+  return (
+    <div className="gap-16">
+      <div className="grid-2">
+        <div className="card metric-card" style={{ "--accent": "#a78bfa" }}>
+          <div className="card-glow" />
+          <div className="card-title">Fix Cost (คงที่)</div>
+          <div className="metric-val">฿{fmt(fixCost)}</div>
+          <div className="metric-sub">ค่าเช่า, Netflix, อินเทอร์เน็ต</div>
+          <div className="metric-badge badge-blue">จ่ายทุกเดือน</div>
+        </div>
+        <div className="card metric-card" style={{ "--accent": "#ffbe3d" }}>
+          <div className="card-glow" />
+          <div className="card-title">Variable Cost (ผันแปร)</div>
+          <div className="metric-val">฿{fmt(varCost)}</div>
+          <div className="metric-sub">อาหาร, เดินทาง, ช้อปปิ้ง</div>
+          <div className="metric-badge badge-gold">ขึ้นกับพฤติกรรม</div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="section-title" style={{ marginBottom: 20 }}>งบประมาณแต่ละหมวด</div>
+        {BUDGETS.map(b => {
+          const cat = CATEGORIES[b.cat];
+          const s   = parseFloat(spent[b.cat]) || 0;
+          const limit = parseFloat(b.limit) || 1;
+          const pct = Math.min((s / limit) * 100, 100);
+          const over = s > limit;
+          return (
+            <div key={b.cat} className="budget-item">
+              <div className="budget-header">
+                <span className="budget-name">{cat.icon} {cat.label}</span>
+                <span className="budget-amounts">฿{fmt(s)} / ฿{fmt(limit)}</span>
+              </div>
+              <div className="progress-bar">
+                <div className="progress-fill" style={{
+                  width: `${pct}%`,
+                  background: over ? "linear-gradient(90deg, var(--red2), var(--red))" : pct > 80 ? "linear-gradient(90deg, var(--gold2), var(--gold))" : "linear-gradient(90deg, var(--green2), var(--green))"
+                }} />
+              </div>
+              {over && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 5, fontFamily: "var(--font-mono)" }}>⚠️ เกินงบ ฿{fmt(s - limit)}</div>}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="card">
+        <div className="card-title">คาดการณ์รายจ่าย 6 เดือน (รอเก็บข้อมูล)</div>
+        <div style={{ display: "flex", gap: 8, alignItems: "flex-end", height: 100 }}>
+          {actuals.concat([forecast[forecast.length - 1]]).map((v, i) => {
+            const max       = Math.max(...actuals, forecast[forecast.length - 1], 1);
+            const isForecast = i === actuals.length;
+            return (
+              <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                <div style={{ fontSize: 9, color: "var(--text2)", fontFamily: "var(--font-mono)" }}>
+                  {isForecast ? "~" : ""}{fmt(v / 1000, 0)}k
+                </div>
+                <div style={{ width: "100%", height: `${(v / max) * 80}px`, minHeight: 3, background: isForecast ? "rgba(75,143,255,0.35)" : "linear-gradient(to top, var(--red2), var(--red))", borderRadius: "5px 5px 0 0", border: isForecast ? "1px dashed rgba(75,143,255,0.5)" : "none" }} />
+                <div style={{ fontSize: 9, color: "var(--text3)", fontFamily: "var(--font-mono)" }}>{months[i]}</div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="divider" />
+        <div className="row">
+          <div style={{ width: 10, height: 10, borderRadius: 3, background: "var(--red)" }} />
+          <span style={{ fontSize: 11, color: "var(--text2)", fontFamily: "var(--font-mono)" }}>รายจ่ายจริง</span>
+          <div style={{ width: 10, height: 10, borderRadius: 3, background: "rgba(75,143,255,0.4)", border: "1px dashed rgba(75,143,255,0.6)" }} />
+          <span style={{ fontSize: 11, color: "var(--text2)", fontFamily: "var(--font-mono)" }}>คาดการณ์ (ค่าเฉลี่ย)</span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
+// ============================================================
+// MAIN APP
+// ============================================================
 const TABS = [
   { id: "dashboard",    icon: "◼",  label: "Dashboard" },
   { id: "transactions", icon: "💳", label: "รายรับ-รายจ่าย" },
-  { id: "sms",          icon: "📲", label: "MAKE Parser" },
+  { id: "sms",          icon: "📲", label: "MAKE / Dime Parser" },
   { id: "portfolio",    icon: "📈", label: "พอร์ตลงทุน" },
+  { id: "budget",       icon: "🎯", label: "งบ & คาดการณ์" },
 ];
 
 export default function App() {
@@ -1294,12 +1426,13 @@ export default function App() {
   const [usernameInput, setUsernameInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [loginError, setLoginError] = useState(false);
+
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem("tw_tab") || "dashboard");
   const [txs, setTxs] = useState([]);
   const [portfolio, setPortfolio] = useState([]);
   const [exchangeRate, setExchangeRate] = useState(32.54);
   const [loading, setLoading] = useState(true);
-  const [livePrices, setLivePrices] = useState({});
+  const [livePrices, setLivePrices] = useState({ ...MOCK_PRICES, ...MOCK_CRYPTO });
   const [isLoadingPrices, setIsLoadingPrices] = useState(true);
 
   useEffect(() => { localStorage.setItem("tw_tab", activeTab); }, [activeTab]);
@@ -1320,37 +1453,65 @@ export default function App() {
     return () => unsub();
   }, [user]);
 
+  // 🌐 ระบบดึงเรทเงินอัจฉริยะ (Focus-based Sync + 15 Min Freshness)
   useEffect(() => {
+    let lastFetchTime = 0;
+    const FRESHNESS_LIMIT = 15 * 60 * 1000; // 15 นาที
+
     async function fetchLiveExchangeRate() {
+      const now = Date.now();
+      if (now - lastFetchTime < FRESHNESS_LIMIT && lastFetchTime !== 0) return;
+
       if (!user) return;
       try {
         const res = await fetch("https://open.er-api.com/v6/latest/USD");
         const data = await res.json();
-        if (data?.rates?.THB) {
+        if (data && data.rates && data.rates.THB) {
           const liveRate = parseFloat(data.rates.THB) || 32.54;
           setExchangeRate(liveRate);
           setDoc(doc(db, "users", user), { exchangeRate: liveRate }, { merge: true });
+          lastFetchTime = Date.now();
         }
-      } catch (err) {}
+      } catch (err) {
+        console.error("ดึงค่าเงินอัตโนมัติไม่สำเร็จ:", err);
+      }
     }
+
     fetchLiveExchangeRate();
     window.addEventListener('focus', fetchLiveExchangeRate);
-    return () => window.removeEventListener('focus', fetchLiveExchangeRate);
+    const interval = setInterval(fetchLiveExchangeRate, 1800000); // สำรองทุก 30 นาที
+
+    return () => {
+      window.removeEventListener('focus', fetchLiveExchangeRate);
+      clearInterval(interval);
+    };
   }, [user]);
 
+  // 📈 ระบบดึงราคาหุ้นตามพอร์ตจริง (ดึงเปอร์เซ็นต์ % มาให้ครบ)
   useEffect(() => {
-    if (!user || portfolio.length === 0) { setIsLoadingPrices(false); return; }
+    if (!user || portfolio.length === 0) {
+      setIsLoadingPrices(false);
+      return;
+    }
     const API_KEY = "d7sandpr01qorsvi1jagd7sandpr01qorsvi1jb0";
-    const uniqueSymbols = [...new Set(portfolio.map(p => p.symbol))];
+    const uniqueSymbols = [...new Set(portfolio.filter(p => p.exchange !== "CRYPTO").map(p => p.symbol))];
+    
     Promise.all(uniqueSymbols.map(sym =>
       fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${API_KEY}`)
         .then(r => r.json())
-        .then(d => ({ symbol: sym, price: parseFloat(d.c) || 0, pct: parseFloat(d.dp) || 0 }))
-        .catch(() => ({ symbol: sym, price: 0, pct: 0 }))
+        .then(d => ({ 
+          symbol: sym, 
+          price: parseFloat(d.c) || 0,
+          change: parseFloat(d.d) || 0,
+          pct: parseFloat(d.dp) || 0
+        }))
+        .catch(err => {
+          return { symbol: sym, price: 0, change: 0, pct: 0 };
+        })
     )).then(results => {
       const newLive = {};
       results.forEach(r => { if (r.price > 0) newLive[r.symbol] = r; });
-      setLivePrices(newLive);
+      setLivePrices(prev => ({ ...prev, ...newLive }));
       setIsLoadingPrices(false);
     });
   }, [user, portfolio]);
@@ -1371,42 +1532,90 @@ export default function App() {
     });
   };
 
-  if (!user) return (
-    <div className="login-wrapper">
-      <style>{styles}</style>
-      <div className="login-glass-card">
-        <h2>Threewit OS</h2>
-        <input className="login-inp-styled" placeholder="Username" onChange={e => setUsernameInput(e.target.value)} />
-        <input className="login-inp-styled" type="password" placeholder="Password" onChange={e => setPasswordInput(e.target.value)} />
-        <button className="login-btn-styled" onClick={() => {
-          if (AUTHORIZED_USERS[usernameInput] === passwordInput) {
-            setUser(usernameInput); localStorage.setItem("tw_user", usernameInput);
-          } else setLoginError(true);
-        }}>Login</button>
+  const handleSetExchangeRate = (val) => {
+    setExchangeRate(parseFloat(val) || 32.54);
+    if (user) setDoc(doc(db, "users", user), { exchangeRate: parseFloat(val) || 32.54 }, { merge: true });
+  };
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (AUTHORIZED_USERS[usernameInput] === passwordInput) {
+      setUser(usernameInput);
+      localStorage.setItem("tw_user", usernameInput);
+      setLoginError(false);
+    } else {
+      setLoginError(true);
+    }
+  };
+
+  if (!user) {
+    return (
+      <div className="login-wrapper">
+        <style>{styles}</style>
+        <div className="login-glow-1" />
+        <div className="login-glow-2" />
+        <div className="login-grid-overlay" />
+        <div className="login-glass-card">
+          <div className="login-logo-wrap">
+            <div className="login-logo">Th</div>
+            <div className="login-brand-text">
+              <div className="login-brand-name">Threewit X Financial</div>
+              <div className="login-brand-sub">FINANCE ENGINE v2</div>
+            </div>
+          </div>
+          <div className="login-divider" />
+          <div className="login-welcome">Welcome back</div>
+          <p className="login-sub">Sign in to access your dashboard</p>
+          <form onSubmit={handleLogin}>
+            <input className="login-inp-styled" placeholder="Username" autoComplete="username" onChange={e => setUsernameInput(e.target.value)} />
+            <input className="login-inp-styled" type="password" placeholder="Password" autoComplete="current-password" onChange={e => setPasswordInput(e.target.value)} />
+            {loginError && <p className="login-error">⚠ รหัสผ่านไม่ถูกต้อง</p>}
+            <button className="login-btn-styled" type="submit">Access System →</button>
+          </form>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   return (
     <>
       <style>{styles}</style>
       <div className="app">
         <nav className="topnav">
-          <div className="topnav-brand"><b>Threewit OS</b></div>
-          <button className="logout-btn" onClick={() => { localStorage.removeItem("tw_user"); setUser(null); }}>Log Out</button>
+          <div className="topnav-brand">
+            <div className="topnav-logo">Th</div>
+            <div>
+              <div className="topnav-title">Threewit Kub 💸</div>
+              <div className="topnav-sub">FINANCE ENGINE</div>
+            </div>
+          </div>
+          <div className="topnav-right">
+            <div className="topnav-sync"><div className="sync-dot" />Active</div>
+            <button className="logout-btn" onClick={() => { localStorage.removeItem("tw_user"); setUser(null); }}>Log Out</button>
+          </div>
         </nav>
+
         <div className="tabs">
           {TABS.map(t => (
-            <button key={t.id} className={`tab ${activeTab === t.id ? "active" : ""}`} onClick={() => setActiveTab(t.id)}>{t.label}</button>
+            <button key={t.id} className={`tab ${activeTab === t.id ? "active" : ""}`} onClick={() => setActiveTab(t.id)}>
+              <span className="tab-icon">{t.icon}</span>{t.label}
+            </button>
           ))}
         </div>
+
         <div className="main">
-          {loading ? <div>Loading...</div> : (
+          {loading ? (
+            <div className="loading-wrap">
+              <div className="loading-spinner" />
+              <div className="loading-text">Syncing with Firebase...</div>
+            </div>
+          ) : (
             <>
-              {activeTab === "dashboard"    && <DashboardTab txs={txs} portfolio={portfolio} livePrices={livePrices} isLoadingPrices={isLoadingPrices} exchangeRate={exchangeRate} />}
+              {activeTab === "dashboard"    && <DashboardTab    txs={txs} portfolio={portfolio} livePrices={livePrices} isLoadingPrices={isLoadingPrices} exchangeRate={exchangeRate} />}
               {activeTab === "transactions" && <TransactionsTab txs={txs} setTxs={handleSetTxs} />}
-              {activeTab === "sms"          && <SmsParserTab setTxs={handleSetTxs} portfolio={portfolio} setPortfolio={handleSetPortfolio} exchangeRate={exchangeRate} />}
-              {activeTab === "portfolio"    && <PortfolioTab portfolio={portfolio} setPortfolio={handleSetPortfolio} livePrices={livePrices} isLoadingPrices={isLoadingPrices} exchangeRate={exchangeRate} setExchangeRate={setExchangeRate} />}
+              {activeTab === "sms"          && <SmsParserTab    setTxs={handleSetTxs} portfolio={portfolio} setPortfolio={handleSetPortfolio} exchangeRate={exchangeRate} />}
+              {activeTab === "portfolio"    && <PortfolioTab    portfolio={portfolio} setPortfolio={handleSetPortfolio} livePrices={livePrices} isLoadingPrices={isLoadingPrices} exchangeRate={exchangeRate} setExchangeRate={handleSetExchangeRate} />}
+              {activeTab === "budget"       && <BudgetTab       txs={txs} />}
             </>
           )}
         </div>
