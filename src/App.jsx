@@ -1155,7 +1155,7 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
   const [cost, setCost] = useState("");
   const [exch, setExch] = useState("US");
 
-    function addHolding() {
+    
     if (!symbol || !shares || !cost) return;
     
     // ล้างตัวอักษรที่พิมพ์ผิดมา (เช่น THB) ให้เหลือแต่ตัวเลข
@@ -1513,7 +1513,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [user]);
 
-    // 📈 ระบบดึงราคาหุ้นจาก Finnhub (แบบฉลาด: ดึงตามหุ้นที่มีในพอร์ตอัตโนมัติ)
+      // 📈 ระบบดึงราคาหุ้นจาก Finnhub (แบบฉลาด: ดึงตามหุ้นที่มีในพอร์ตอัตโนมัติ)
   useEffect(() => {
     if (!user || portfolio.length === 0) {
       setIsLoadingPrices(false);
@@ -1522,13 +1522,17 @@ export default function App() {
     
     const API_KEY = "d7sandpr01qorsvi1jagd7sandpr01qorsvi1jb0";
     
-    // ให้มันลิสต์รายชื่อหุ้นทั้งหมดที่มีในหน้าแอปของท่าน (ไม่เอาคริปโต และไม่ดึงตัวซ้ำ)
     const uniqueSymbols = [...new Set(portfolio.filter(p => p.exchange !== "CRYPTO").map(p => p.symbol))];
     
     Promise.all(uniqueSymbols.map(sym =>
       fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${API_KEY}`)
         .then(r => r.json())
-        .then(d => ({ symbol: sym, price: d.c || 0 }))
+        .then(d => ({ 
+          symbol: sym, 
+          price: d.c || 0,
+          change: d.d || 0, // 👈 เพิ่มบรรทัดนี้: สั่งให้ดึงตัวเลขส่วนต่างราคามาด้วย
+          pct: d.dp || 0    // 👈 เพิ่มบรรทัดนี้: สั่งให้ดึงเปอร์เซ็นต์ % มาด้วย
+        }))
         .catch(err => {
           console.error("API มีปัญหาตรงตัวนี้:", sym, err);
           return { symbol: sym, price: 0 };
@@ -1540,6 +1544,7 @@ export default function App() {
       setIsLoadingPrices(false);
     });
   }, [user, portfolio]);
+
 
 
   const handleSetTxs = (action) => {
