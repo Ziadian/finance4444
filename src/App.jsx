@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, onSnapshot, setDoc } from "firebase/firestore";
 
@@ -24,7 +24,32 @@ const AUTHORIZED_USERS = {
 };
 
 // ============================================================
-// STYLES — PREMIUM DARK FINTECH REDESIGN
+// 💾 LOCALSTORAGE CACHE KEYS
+// ============================================================
+const LS = {
+  USER:      "tw_user",
+  TAB:       "tw_tab",
+  TXS:       "tw_cache_txs",
+  PORTFOLIO: "tw_cache_portfolio",
+  RATE:      "tw_cache_rate",
+  LAST_SAVE: "tw_last_saved",
+};
+
+function lsGet(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return fallback;
+    return JSON.parse(raw);
+  } catch { return fallback; }
+}
+function lsSet(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {
+    console.warn("localStorage write failed:", e);
+  }
+}
+
+// ============================================================
+// STYLES — PREMIUM DARK FINTECH
 // ============================================================
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne+Mono&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap');
@@ -178,6 +203,7 @@ const styles = `
     backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
     position: sticky; top: 0; z-index: 100;
+    flex-shrink: 0;
   }
   .topnav-brand { display: flex; align-items: center; gap: 12px; }
   .topnav-logo {
@@ -191,27 +217,49 @@ const styles = `
   }
   .topnav-title { font-family: var(--font-head); font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
   .topnav-sub { font-size: 10px; color: var(--text3); font-family: var(--font-mono); letter-spacing: 0.08em; margin-top: 1px; }
-  .topnav-right { display: flex; align-items: center; gap: 14px; }
+  .topnav-right { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
   .topnav-sync {
     display: flex; align-items: center; gap: 7px;
     font-size: 11px; color: var(--text2); font-family: var(--font-mono);
     background: rgba(5,226,156,0.06); border: 1px solid rgba(5,226,156,0.15);
-    padding: 5px 12px; border-radius: 20px;
+    padding: 5px 12px; border-radius: 20px; white-space: nowrap;
+  }
+  .topnav-sync.cache {
+    background: rgba(255,190,61,0.06); border-color: rgba(255,190,61,0.25); color: var(--gold);
+  }
+  .topnav-sync.offline {
+    background: rgba(255,61,107,0.06); border-color: rgba(255,61,107,0.25); color: var(--red);
   }
   .sync-dot {
     width: 6px; height: 6px; border-radius: 50%; background: var(--green);
     box-shadow: 0 0 8px var(--green);
     animation: pulse 2.5s ease-in-out infinite;
   }
+  .sync-dot.cache { background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+  .sync-dot.offline { background: var(--red); box-shadow: 0 0 8px var(--red); animation: none; }
   @keyframes pulse { 0%,100%{opacity:1; transform:scale(1)} 50%{opacity:0.5; transform:scale(0.85)} }
   .logout-btn {
     background: rgba(255,61,107,0.08); color: var(--red);
     border: 1px solid rgba(255,61,107,0.2);
     padding: 7px 16px; border-radius: 10px; cursor: pointer;
     font-size: 12px; font-weight: 600; font-family: var(--font-head);
-    transition: background 0.15s, border-color 0.15s;
+    transition: background 0.15s, border-color 0.15s; white-space: nowrap;
   }
   .logout-btn:hover { background: rgba(255,61,107,0.15); border-color: rgba(255,61,107,0.35); }
+  .last-saved {
+    font-size: 10px; color: var(--text3); font-family: var(--font-mono);
+    white-space: nowrap; display: none;
+  }
+  @media(min-width: 768px) { .last-saved { display: block; } }
+
+  /* =============================================
+     ⚠️ CACHE BANNER
+     ============================================= */
+  .cache-banner {
+    background: rgba(255,190,61,0.08); border-bottom: 1px solid rgba(255,190,61,0.25);
+    padding: 10px 28px; display: flex; align-items: center; gap: 10px;
+    font-size: 12px; color: var(--gold); font-family: var(--font-mono);
+  }
 
   /* =============================================
      🗂 TABS
@@ -263,14 +311,15 @@ const styles = `
   @media(max-width: 640px) {
     .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
     .main { padding: 14px 16px; }
-    .topnav { padding: 0 16px; }
+    .topnav { padding: 0 14px; height: 58px; }
+    .topnav-sub { display: none; }
     .tabs { padding: 8px 12px; gap: 4px; }
     .tab { padding: 8px 12px; font-size: 12px; }
     .metric-val { font-size: 22px !important; }
     .card { padding: 16px; }
-    .data-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
     .input-row { flex-direction: column; }
     .input-row .inp { min-width: 0; width: 100%; }
+    .topnav-right { gap: 6px; }
   }
 
   /* =============================================
@@ -337,7 +386,7 @@ const styles = `
   /* =============================================
      📋 SECTION HEADERS
      ============================================= */
-  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
   .section-title { font-family: var(--font-head); font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
 
   /* =============================================
@@ -377,7 +426,7 @@ const styles = `
   }
   .tx-info { flex: 1; min-width: 0; }
   .tx-name { font-size: 13px; font-weight: 500; font-family: var(--font-head); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .tx-meta { font-size: 11px; color: var(--text2); margin-top: 3px; font-family: var(--font-mono); display: flex; align-items: center; gap: 6px; }
+  .tx-meta { font-size: 11px; color: var(--text2); margin-top: 3px; font-family: var(--font-mono); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .tx-amount { font-family: var(--font-head); font-size: 14px; font-weight: 700; text-align: right; flex-shrink: 0; letter-spacing: -0.02em; }
 
   /* =============================================
@@ -406,8 +455,8 @@ const styles = `
   /* =============================================
      🍩 DONUT CHART
      ============================================= */
-  .donut-wrap { display: flex; align-items: center; gap: 24px; }
-  .donut-legend { flex: 1; }
+  .donut-wrap { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .donut-legend { flex: 1; min-width: 120px; }
   .legend-item { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
   .legend-dot { width: 8px; height: 8px; border-radius: 3px; flex-shrink: 0; }
   .legend-label { font-size: 12px; color: var(--text2); flex: 1; font-family: var(--font-head); }
@@ -431,8 +480,12 @@ const styles = `
     box-shadow: 0 0 0 3px rgba(75,143,255,0.08);
     background: rgba(75,143,255,0.04);
   }
+  .inp.inp-error { border-color: rgba(255,61,107,0.5); }
   .inp::placeholder { color: var(--text3); }
   select.inp { appearance: none; cursor: pointer; }
+  .inp-hint { font-size: 11px; color: var(--text2); font-family: var(--font-mono); margin-top: -8px; margin-bottom: 10px; padding: 0 4px; }
+  .inp-hint.warn { color: var(--gold); }
+  .inp-hint.ok { color: var(--green); }
 
   .btn {
     padding: 11px 20px; border-radius: 11px; border: none;
@@ -459,10 +512,15 @@ const styles = `
     background: linear-gradient(135deg, var(--red), var(--red2));
     color: #fff; box-shadow: 0 4px 14px rgba(255,61,107,0.2);
   }
+  .btn-gold {
+    background: linear-gradient(135deg, var(--gold2), var(--gold));
+    color: #000; box-shadow: 0 4px 14px rgba(255,190,61,0.2); font-size: 12px;
+  }
   .btn-action {
     background: none; border: none; cursor: pointer;
-    padding: 5px 7px; font-size: 15px; opacity: 0.5;
+    padding: 6px 9px; font-size: 15px; opacity: 0.5;
     transition: opacity 0.15s, transform 0.15s; border-radius: 6px;
+    min-width: 34px; min-height: 34px; display: inline-flex; align-items: center; justify-content: center;
   }
   .btn-action:hover { opacity: 1; transform: scale(1.2); background: rgba(255,255,255,0.06); }
 
@@ -542,10 +600,49 @@ const styles = `
   .exchange-input:focus { border-bottom-color: var(--blue); color: var(--blue); }
 
   /* =============================================
+     🌀 EMPTY STATES
+     ============================================= */
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 60px 24px; text-align: center; gap: 16px;
+  }
+  .empty-icon {
+    width: 72px; height: 72px; border-radius: 20px;
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px; margin-bottom: 4px;
+  }
+  .empty-title { font-family: var(--font-head); font-size: 17px; font-weight: 600; color: var(--text); }
+  .empty-sub { font-size: 13px; color: var(--text2); font-family: var(--font-thai); max-width: 280px; line-height: 1.6; }
+
+  /* =============================================
+     📱 PORTFOLIO MOBILE CARDS
+     ============================================= */
+  .port-table-wrap { overflow-x: auto; }
+  @media(max-width: 767px) {
+    .port-table-wrap { display: none; }
+    .port-cards { display: flex; flex-direction: column; gap: 12px; }
+  }
+  @media(min-width: 768px) {
+    .port-cards { display: none; }
+  }
+  .port-card {
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px;
+  }
+  .port-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .port-card-sym { font-family: var(--font-head); font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+  .port-card-actions { display: flex; gap: 4px; }
+  .port-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .port-card-stat { }
+  .port-card-label { font-size: 10px; color: var(--text3); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 3px; }
+  .port-card-val { font-size: 14px; font-weight: 600; font-family: var(--font-head); color: var(--text); }
+
+  /* =============================================
      🛠 UTILITIES
      ============================================= */
   .mt-16 { margin-top: 16px; } .mt-12 { margin-top: 12px; } .mt-8 { margin-top: 8px; }
-  .row { display: flex; align-items: center; gap: 10px; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .text-right { text-align: right; } .text-mono { font-family: var(--font-mono); }
   .text-xs { font-size: 11px; } .text-muted { color: var(--text2); }
   .divider { height: 1px; background: var(--border); margin: 16px 0; }
@@ -578,16 +675,16 @@ const styles = `
 // MOCK DATA
 // ============================================================
 const MOCK_PRICES = {
-  VOO: { price: 662.42, change: -0.18, pct: -0.03, name: "Vanguard S&P 500" },
-  NVDA: { price: 890.00, change: 23.4, pct: 2.73, name: "NVIDIA" },
-  GOOG: { price: 170.00, change: 0.90, pct: 0.55, name: "Alphabet Class C" },
-  TSLA: { price: 177.9, change: -5.2, pct: -2.84, name: "Tesla" },
-  GOOGL: { price: 168.42, change: 0.88, pct: 0.52, name: "Alphabet Class A" },
-  AMZN: { price: 191.75, change: 3.12, pct: 1.65, name: "Amazon" },
+  VOO:   { price: 662.42, change: -0.18, pct: -0.03, name: "Vanguard S&P 500" },
+  NVDA:  { price: 890.00, change: 23.4,  pct: 2.73,  name: "NVIDIA" },
+  GOOG:  { price: 170.00, change: 0.90,  pct: 0.55,  name: "Alphabet Class C" },
+  TSLA:  { price: 177.9,  change: -5.2,  pct: -2.84, name: "Tesla" },
+  GOOGL: { price: 168.42, change: 0.88,  pct: 0.52,  name: "Alphabet Class A" },
+  AMZN:  { price: 191.75, change: 3.12,  pct: 1.65,  name: "Amazon" },
 };
 const MOCK_CRYPTO = {
   BTC: { price: 64230, change: 1820, pct: 2.91, name: "Bitcoin" },
-  ETH: { price: 3142, change: -45, pct: -1.41, name: "Ethereum" },
+  ETH: { price: 3142,  change: -45,  pct: -1.41, name: "Ethereum" },
 };
 const CATEGORIES = {
   food:      { label: "อาหาร",     icon: "🍜", color: "#f0b429" },
@@ -607,15 +704,18 @@ const BUDGETS = [
   { cat: "health",    limit: 1500 },
 ];
 
+// ============================================================
+// UTILITY FUNCTIONS
+// ============================================================
 function parseMakeSMS(sms) {
   const text = sms.trim();
   const result = { valid: false };
   const investMatch = text.match(/ซื้อ|ซื้อหุ้น|buy|ลงทุน|invest/i);
   const incomeMatch = text.match(/รับโอน|รับชำระ|เงินเข้า|โอนเงินเข้า|โอนเข้า|deposit|received/i);
-  const amtMatch = text.match(/(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*(?:บาท|THB|฿)/i) || text.match(/(?:จำนวน|Amount)[:\s]*(\d[\d,\.]+)/i) || text.match(/(\d{1,3}(?:,\d{3})*\.\d{2})/);
+  const amtMatch = text.match(/(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*(?:บาท|THB|฿)/i) || text.match(/(?:จำนวน|Amount)[:\s]*(\d[\d,.]+)/i) || text.match(/(\d{1,3}(?:,\d{3})*\.\d{2})/);
   const dateMatch = text.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
   const refMatch = text.match(/(?:ที่|จาก|ไปยัง|to|from|Ref)[:\s]*([^\n]+)/i);
-  const balMatch = text.match(/(?:คงเหลือ|Balance|ยอด)[:\s:]*(\d[\d,\.]+)/i);
+  const balMatch = text.match(/(?:คงเหลือ|Balance|ยอด)[:\s:](\d[\d,.]+)/i);
 
   if (amtMatch) {
     result.valid = true;
@@ -632,7 +732,9 @@ function parseMakeSMS(sms) {
       result.type = "expense"; result.direction = "-";
       result.cat = guessCategory(refMatch ? refMatch[1] : text);
     }
-    result.date = dateMatch ? `${dateMatch[3].length === 2 ? "20" + dateMatch[3] : dateMatch[3]}-${String(dateMatch[2]).padStart(2, "0")}-${String(dateMatch[1]).padStart(2, "0")}` : new Date().toISOString().slice(0, 10);
+    result.date = dateMatch
+      ? `${dateMatch[3].length === 2 ? "20" + dateMatch[3] : dateMatch[3]}-${String(dateMatch[2]).padStart(2,"0")}-${String(dateMatch[1]).padStart(2,"0")}`
+      : new Date().toISOString().slice(0, 10);
     result.merchant = refMatch ? refMatch[1].trim().slice(0, 40) : (investMatch ? "Invest Transaction" : "MAKE by KBank Transaction");
     result.balance = balMatch ? parseFloat(balMatch[1].replace(/,/g, "")) : null;
     result.source = "MAKE SMS";
@@ -651,10 +753,15 @@ function guessCategory(text) {
   return "other";
 }
 
-function fmt(n, dec = 0) { 
+function fmt(n, dec = 0) {
   const val = parseFloat(n);
   if (isNaN(val)) return (0).toLocaleString("th-TH", { minimumFractionDigits: dec, maximumFractionDigits: dec });
   return val.toLocaleString("th-TH", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+
+function fmtTime(date) {
+  if (!date) return null;
+  return date.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
 // ============================================================
@@ -712,26 +819,22 @@ function MiniBarChart({ values, color = "#4b8fff", height = 50 }) {
 // ============================================================
 function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices, exchangeRate }) {
   const safeRate = parseFloat(exchangeRate) || 32.54;
-  const thisMonth = txs.filter(t => t.date && t.date.startsWith(new Date().toISOString().slice(0, 7)));
-  const income = txs.filter(t => (parseFloat(t.amount) || 0) > 0).reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
+  const income  = txs.filter(t => (parseFloat(t.amount) || 0) > 0).reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
   const expense = txs.filter(t => (parseFloat(t.amount) || 0) < 0).reduce((s, t) => s + Math.abs(parseFloat(t.amount) || 0), 0);
-  const saving = income - expense;
+  const saving  = income - expense;
   const savingRate = income > 0 ? (saving / income) * 100 : 0;
-  const portValue = portfolio.reduce((s, p) => { 
-    const px = parseFloat(livePrices[p.symbol]?.price || p.avgCost) || 0; 
-    return s + px * (parseFloat(p.shares) || 0); 
+  const portValue  = portfolio.reduce((s, p) => {
+    const px = parseFloat(livePrices[p.symbol]?.price || p.avgCost) || 0;
+    return s + px * (parseFloat(p.shares) || 0);
   }, 0);
   const portCost = portfolio.reduce((s, p) => s + (parseFloat(p.avgCost) || 0) * (parseFloat(p.shares) || 0), 0);
-  const portPnL = portValue - portCost;
-  
-  const bankBalance = txs.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-  const debt = 0;
+  const portPnL  = portValue - portCost;
+  const bankBalance  = txs.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
   const portValueTHB = portValue * safeRate;
-  const netWorth = bankBalance + portValueTHB - debt;
+  const netWorth     = bankBalance + portValueTHB;
   const allocData = [
     { label: "เงินฝาก", value: Math.max(bankBalance, 0), color: "#4b8fff" },
-    { label: "หุ้น US",  value: portValueTHB,             color: "#05e29c" },
-    { label: "หนี้สิน", value: debt,                      color: "#ff3d6b" },
+    { label: "หุ้น US",  value: portValueTHB,              color: "#05e29c" },
   ].filter(d => d.value > 0);
   const monthlyExpenses = [0, 0, 0, 0, expense];
 
@@ -745,15 +848,15 @@ function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices, exchangeRat
 
       <div className="grid-4">
         {[
-          { label: "NET WORTH",        val: isLoadingPrices ? "Loading..." : `฿${fmt(netWorth)}`,       sub: "ทรัพย์สินสุทธิ", badge: "Live", btype: "badge-green", accent: "#05e29c" },
-          { label: "เงินฝาก (CASH)",    val: `฿${fmt(bankBalance)}`,                                     sub: "เงินพร้อมใช้ (MAKE)", badge: "สภาพคล่อง", btype: "badge-blue", accent: "#4b8fff" },
-          { label: "มูลค่าพอร์ต (THB)", val: isLoadingPrices ? "Loading..." : `฿${fmt(portValueTHB)}`, sub: isLoadingPrices ? "" : `P&L: ${portPnL >= 0 ? "+" : ""}$${fmt(portPnL, 2)}`, badge: isLoadingPrices ? "..." : `${portPnL >= 0 ? "+" : ""}${((portPnL / (portCost || 1)) * 100).toFixed(1)}%`, btype: portPnL >= 0 ? "badge-green" : "badge-red", accent: "#a78bfa" },
-          { label: "รายจ่ายเดือนนี้",      val: `฿${fmt(expense)}`,                                       sub: `รายรับเดือนนี้: ฿${fmt(income)}`, badge: expense > 30000 ? "เกินงบ" : "ในงบ", btype: expense > 30000 ? "badge-red" : "badge-green", accent: expense > 30000 ? "#ff3d6b" : "#ffbe3d" },
+          { label: "NET WORTH",         val: isLoadingPrices ? "Loading..." : `฿${fmt(netWorth)}`,        sub: "ทรัพย์สินสุทธิ",              badge: "Live",  btype: "badge-green", accent: "#05e29c" },
+          { label: "เงินฝาก (CASH)",    val: `฿${fmt(bankBalance)}`,                                      sub: "เงินพร้อมใช้ (MAKE)",          badge: "สภาพคล่อง", btype: "badge-blue", accent: "#4b8fff" },
+          { label: "มูลค่าพอร์ต (THB)", val: isLoadingPrices ? "Loading..." : `฿${fmt(portValueTHB)}`,   sub: `P&L: ${portPnL >= 0 ? "+" : ""}$${fmt(portPnL, 2)}`, badge: `${portPnL >= 0 ? "+" : ""}${((portPnL / (portCost || 1)) * 100).toFixed(1)}%`, btype: portPnL >= 0 ? "badge-green" : "badge-red", accent: "#a78bfa" },
+          { label: "รายจ่ายเดือนนี้",   val: `฿${fmt(expense)}`,                                          sub: `รายรับเดือนนี้: ฿${fmt(income)}`, badge: expense > 30000 ? "เกินงบ" : "ในงบ", btype: expense > 30000 ? "badge-red" : "badge-green", accent: expense > 30000 ? "#ff3d6b" : "#ffbe3d" },
         ].map((m, i) => (
           <div key={i} className="card metric-card" style={{ "--accent": m.accent }}>
             <div className="card-glow" style={{ "--accent": m.accent, background: `radial-gradient(circle, ${m.accent} 0%, transparent 70%)` }} />
             <div className="card-title">{m.label}</div>
-            <div className="metric-val" style={{ fontSize: isLoadingPrices && (i === 0 || i === 3) ? "18px" : undefined }}>{m.val}</div>
+            <div className="metric-val" style={{ fontSize: isLoadingPrices && (i === 0 || i === 2) ? "18px" : undefined }}>{m.val}</div>
             <div className="metric-sub">{m.sub}</div>
             <div className={`metric-badge ${m.btype}`}>{m.badge}</div>
           </div>
@@ -763,18 +866,22 @@ function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices, exchangeRat
       <div className="grid-2">
         <div className="card">
           <div className="card-title">การจัดสรรสินทรัพย์ {isLoadingPrices && "⏳"}</div>
-          <div className="donut-wrap">
-            <DonutChart data={allocData} size={160} />
-            <div className="donut-legend">
-              {allocData.map((d, i) => (
-                <div key={i} className="legend-item">
-                  <div className="legend-dot" style={{ background: d.color }} />
-                  <span className="legend-label">{d.label}</span>
-                  <span className="legend-val">฿{fmt(d.value)}</span>
-                </div>
-              ))}
+          {allocData.length === 0 ? (
+            <div style={{ color: "var(--text3)", fontFamily: "var(--font-mono)", fontSize: 12, padding: "20px 0" }}>ยังไม่มีข้อมูลสินทรัพย์</div>
+          ) : (
+            <div className="donut-wrap">
+              <DonutChart data={allocData} size={140} />
+              <div className="donut-legend">
+                {allocData.map((d, i) => (
+                  <div key={i} className="legend-item">
+                    <div className="legend-dot" style={{ background: d.color }} />
+                    <span className="legend-label">{d.label}</span>
+                    <span className="legend-val">฿{fmt(d.value)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="card">
@@ -788,7 +895,7 @@ function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices, exchangeRat
           <div className="divider" />
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
             <span style={{ color: "var(--text2)", fontFamily: "var(--font-mono)", fontSize: 11 }}>ออมเดือนนี้</span>
-            <span style={{ color: "var(--green)", fontFamily: "var(--font-head)", fontWeight: 700 }}>฿{fmt(saving)}</span>
+            <span style={{ color: saving >= 0 ? "var(--green)" : "var(--red)", fontFamily: "var(--font-head)", fontWeight: 700 }}>฿{fmt(saving)}</span>
           </div>
         </div>
       </div>
@@ -836,49 +943,52 @@ function DashboardTab({ txs, portfolio, livePrices, isLoadingPrices, exchangeRat
           <span className="section-title">รายการล่าสุด</span>
           <span style={{ fontSize: 11, color: "var(--text3)", fontFamily: "var(--font-mono)" }}>MAKE by KBank</span>
         </div>
-        {txs.length === 0 && (
-          <div style={{ textAlign: "center", padding: "32px 0", color: "var(--text2)", fontFamily: "var(--font-mono)", fontSize: 12 }}>
-            ยังไม่มีรายการทางการเงินในระบบ
+        {txs.length === 0 ? (
+          <div className="empty-state" style={{ padding: "32px 0" }}>
+            <div className="empty-icon">📭</div>
+            <div className="empty-title">ยังไม่มีรายการ</div>
+            <div className="empty-sub">เพิ่มรายรับ-รายจ่ายได้ที่แท็บ "รายรับ-รายจ่าย"</div>
           </div>
-        )}
-        {txs.slice(0, 5).map(tx => {
-          const cat = CATEGORIES[tx.cat] || CATEGORIES.other;
-          return (
-            <div key={tx.id} className="tx-item">
-              <div className="tx-icon" style={{ background: cat.color + "15", border: `1px solid ${cat.color}25` }}>{cat.icon}</div>
-              <div className="tx-info">
-                <div className="tx-name">{tx.desc}</div>
-                <div className="tx-meta">
-                  <span>{tx.date}</span>
-                  <span style={{ color: "var(--border3)" }}>·</span>
-                  <span>{cat.label}</span>
-                  <span style={{ color: "var(--border3)" }}>·</span>
-                  <span className={tx.type === "fix" ? "tag tag-fix" : "tag tag-var"}>{tx.type === "fix" ? "Fix" : "Var"}</span>
+        ) : (
+          txs.slice(0, 5).map(tx => {
+            const cat = CATEGORIES[tx.cat] || CATEGORIES.other;
+            return (
+              <div key={tx.id} className="tx-item">
+                <div className="tx-icon" style={{ background: cat.color + "15", border: `1px solid ${cat.color}25` }}>{cat.icon}</div>
+                <div className="tx-info">
+                  <div className="tx-name">{tx.desc}</div>
+                  <div className="tx-meta">
+                    <span>{tx.date}</span>
+                    <span style={{ color: "var(--border3)" }}>·</span>
+                    <span>{cat.label}</span>
+                    <span style={{ color: "var(--border3)" }}>·</span>
+                    <span className={tx.type === "fix" ? "tag tag-fix" : "tag tag-var"}>{tx.type === "fix" ? "Fix" : "Var"}</span>
+                  </div>
+                </div>
+                <div className="tx-amount" style={{ color: tx.amount > 0 ? "var(--green)" : "var(--text)" }}>
+                  {tx.amount > 0 ? "+" : ""}฿{fmt(Math.abs(tx.amount))}
                 </div>
               </div>
-              <div className="tx-amount" style={{ color: tx.amount > 0 ? "var(--green)" : "var(--text)" }}>
-                {tx.amount > 0 ? "+" : ""}฿{fmt(Math.abs(tx.amount))}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
     </div>
   );
 }
 
 function TransactionsTab({ txs, setTxs }) {
-  const [desc, setDesc] = useState("");
+  const [desc, setDesc]     = useState("");
   const [amount, setAmount] = useState("");
-  const [cat, setCat] = useState("food");
-  const [type, setType] = useState("var");
+  const [cat, setCat]       = useState("food");
+  const [type, setType]     = useState("var");
   const [filter, setFilter] = useState("all");
   const [txSign, setTxSign] = useState("-");
   const [editId, setEditId] = useState(null);
 
   function saveTx() {
     if (!desc || !amount) return;
-    const cleanAmt = parseFloat(amount.toString().replace(/[^0-9.]/g, '')) || 0;
+    const cleanAmt = parseFloat(amount.toString().replace(/[^0-9.]/g, "")) || 0;
     const finalAmt = cleanAmt * (txSign === "-" ? -1 : 1);
     if (editId) {
       setTxs(prev => prev.map(t => t.id === editId ? { ...t, desc, amount: finalAmt, cat, type } : t));
@@ -891,13 +1001,9 @@ function TransactionsTab({ txs, setTxs }) {
   }
 
   function editTx(tx) {
-    setDesc(tx.desc);
-    setAmount(Math.abs(tx.amount).toString());
-    setTxSign(tx.amount >= 0 ? "+" : "-");
-    setCat(tx.cat);
-    setType(tx.type);
-    setEditId(tx.id);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setDesc(tx.desc); setAmount(Math.abs(tx.amount).toString());
+    setTxSign(tx.amount >= 0 ? "+" : "-"); setCat(tx.cat); setType(tx.type); setEditId(tx.id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function deleteTx(id) {
@@ -909,6 +1015,7 @@ function TransactionsTab({ txs, setTxs }) {
   const filtered = filter === "all" ? txs : filter === "income" ? txs.filter(t => t.amount > 0) : txs.filter(t => t.amount < 0);
   const totalIn  = txs.filter(t => t.amount > 0).reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
   const totalOut = txs.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(parseFloat(t.amount) || 0), 0);
+
   return (
     <div className="gap-16">
       <div className="grid-3">
@@ -970,67 +1077,72 @@ function TransactionsTab({ txs, setTxs }) {
           <span className="section-title">ประวัติรายการ ({filtered.length})</span>
           <div className="row" style={{ gap: 6 }}>
             {["all", "income", "expense"].map(f => (
-              <button key={f}
-                className={`btn btn-ghost ${filter === f ? "active" : ""}`}
-                style={{ padding: "6px 14px", fontSize: 12, background: filter === f ? "rgba(255,255,255,0.09)" : undefined }}
+              <button key={f} className={`btn btn-ghost ${filter === f ? "active" : ""}`}
+                style={{ padding: "6px 14px", fontSize: 12 }}
                 onClick={() => setFilter(f)}>
                 {f === "all" ? "ทั้งหมด" : f === "income" ? "รายรับ" : "รายจ่าย"}
               </button>
             ))}
           </div>
         </div>
-        <div style={{ overflowX: "auto" }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>วันที่</th>
-                <th>รายการ</th>
-                <th>หมวด</th>
-                <th>ประเภท</th>
-                <th className="text-right">จำนวน</th>
-                <th className="text-right">จัดการ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 && (
-                <tr><td colSpan="6" style={{ textAlign: "center", color: "var(--text2)", padding: "28px", fontFamily: "var(--font-mono)", fontSize: 12 }}>ไม่มีรายการ</td></tr>
-              )}
-              {filtered.map(tx => {
-                const cat = CATEGORIES[tx.cat] || CATEGORIES.other;
-                return (
-                  <tr key={tx.id}>
-                    <td style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text2)" }}>{tx.date}</td>
-                    <td style={{ fontFamily: "var(--font-head)", fontWeight: 500 }}>{tx.desc}</td>
-                    <td><span style={{ fontSize: 12 }}>{cat.icon} {cat.label}</span></td>
-                    <td><span className={tx.type === "fix" ? "tag tag-fix" : "tag tag-var"}>{tx.type === "fix" ? "Fix" : "Var"}</span></td>
-                    <td className="text-right" style={{ fontFamily: "var(--font-head)", fontWeight: 700, color: tx.amount > 0 ? "var(--green)" : "var(--text)" }}>
-                      {tx.amount > 0 ? "+" : ""}฿{fmt(Math.abs(tx.amount))}
-                    </td>
-                    <td className="text-right">
-                      <button className="btn-action" onClick={() => editTx(tx)} title="แก้ไข">✏️</button>
-                      <button className="btn-action" onClick={() => deleteTx(tx.id)} title="ลบ">🗑️</button>
-                    </td>
+
+        {filtered.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">📋</div>
+            <div className="empty-title">ไม่มีรายการ</div>
+            <div className="empty-sub">เพิ่มรายการด้านบนเพื่อเริ่มต้น</div>
+          </div>
+        ) : (
+          <>
+            {/* Desktop table */}
+            <div style={{ display: "block", overflowX: "auto" }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>วันที่</th><th>รายการ</th><th>หมวด</th><th>ประเภท</th>
+                    <th className="text-right">จำนวน</th><th className="text-right">จัดการ</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {filtered.map(tx => {
+                    const cat = CATEGORIES[tx.cat] || CATEGORIES.other;
+                    return (
+                      <tr key={tx.id}>
+                        <td style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text2)" }}>{tx.date}</td>
+                        <td style={{ fontFamily: "var(--font-head)", fontWeight: 500 }}>{tx.desc}</td>
+                        <td><span style={{ fontSize: 12 }}>{cat.icon} {cat.label}</span></td>
+                        <td><span className={tx.type === "fix" ? "tag tag-fix" : "tag tag-var"}>{tx.type === "fix" ? "Fix" : "Var"}</span></td>
+                        <td className="text-right" style={{ fontFamily: "var(--font-head)", fontWeight: 700, color: tx.amount > 0 ? "var(--green)" : "var(--text)" }}>
+                          {tx.amount > 0 ? "+" : ""}฿{fmt(Math.abs(tx.amount))}
+                        </td>
+                        <td className="text-right">
+                          <button className="btn-action" onClick={() => editTx(tx)} title="แก้ไข">✏️</button>
+                          <button className="btn-action" onClick={() => deleteTx(tx.id)} title="ลบ">🗑️</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
 function SmsParserTab({ setTxs, portfolio, setPortfolio, exchangeRate }) {
-  const [sms, setSms] = useState("");
+  const [sms, setSms]       = useState("");
   const [result, setResult] = useState(null);
-  const [added, setAdded] = useState(false);
+  const [added, setAdded]   = useState(false);
 
   const examples = [
     `MAKE: เงินเข้า 10,000 บาท`,
     `MAKE: ซื้อหุ้น NVDA 5 หุ้น 20,000 บาท`,
     `MAKE: จ่าย Netflix 419.00 บาท วันที่ 02/05/67`,
   ];
+
   function parse() { const r = parseMakeSMS(sms); setResult(r); setAdded(false); }
 
   function addToLedger() {
@@ -1044,12 +1156,12 @@ function SmsParserTab({ setTxs, portfolio, setPortfolio, exchangeRate }) {
     setTxs(prev => [newTx, ...prev]);
     if (result.cat === "invest" && result.symbol) {
       setPortfolio(prev => {
-        const existing = prev.find(p => p.symbol === result.symbol);
+        const existing   = prev.find(p => p.symbol === result.symbol);
         const sharesToAdd = parseFloat(result.shares) || 1;
-        const costUSD = (parseFloat(result.amount) || 0) / (parseFloat(exchangeRate) || 32.54);
+        const costUSD     = (parseFloat(result.amount) || 0) / (parseFloat(exchangeRate) || 32.54);
         if (existing) {
-          const totalCost = (parseFloat(existing.avgCost) * parseFloat(existing.shares)) + costUSD;
-          const newShares = parseFloat(existing.shares) + sharesToAdd;
+          const totalCost  = (parseFloat(existing.avgCost) * parseFloat(existing.shares)) + costUSD;
+          const newShares  = parseFloat(existing.shares) + sharesToAdd;
           const newAvgCost = totalCost / newShares;
           return prev.map(p => p.symbol === result.symbol ? { ...p, shares: newShares, avgCost: newAvgCost } : p);
         } else {
@@ -1083,10 +1195,10 @@ function SmsParserTab({ setTxs, portfolio, setPortfolio, exchangeRate }) {
               <>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "var(--green)", marginBottom: 14, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>✅ PARSE SUCCESS</div>
                 {[
-                  ["TYPE",    result.type === "income" ? "💰 รายรับ" : "💸 รายจ่าย"],
-                  ["AMOUNT",  `${result.direction}฿${fmt(result.amount, 2)}`],
+                  ["TYPE",     result.type === "income" ? "💰 รายรับ" : "💸 รายจ่าย"],
+                  ["AMOUNT",   `${result.direction}฿${fmt(result.amount, 2)}`],
                   ...(result.cat === "invest" && result.symbol ? [["SYMBOL", result.symbol], ["SHARES", `${result.shares || 1} หุ้น`]] : []),
-                  ["DATE",    result.date],
+                  ["DATE",     result.date],
                   ["MERCHANT", result.merchant],
                   ["CATEGORY", `${CATEGORIES[result.cat]?.icon} ${CATEGORIES[result.cat]?.label}`],
                 ].map(([k, v]) => (
@@ -1106,63 +1218,69 @@ function SmsParserTab({ setTxs, portfolio, setPortfolio, exchangeRate }) {
   );
 }
 
-function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, exchangeRate, setExchangeRate }) {
+function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, exchangeRate, setExchangeRate, onExport, onImport }) {
   const [symbol, setSymbol] = useState("");
   const [shares, setShares] = useState("");
-  const [cost, setCost] = useState("");
-  const [exch, setExch] = useState("US");
+  const [cost, setCost]     = useState("");
+  const [exch, setExch]     = useState("US");
+  const [formError, setFormError] = useState("");
   const safeRate = parseFloat(exchangeRate) || 32.54;
 
-  function addHolding() {
-    if (!symbol || !shares || !cost) return;
-    const cleanShares = shares.toString().replace(/[^0-9.]/g, '');
-    const cleanCost = cost.toString().replace(/[^0-9.]/g, '');
-    const numShares = parseFloat(cleanShares);
-    const numCost = parseFloat(cleanCost);
+  const existingSym = symbol ? portfolio.find(p => p.symbol === symbol.toUpperCase()) : null;
 
-    if (isNaN(numShares) || isNaN(numCost)) {
-      alert("กรุณากรอกตัวเลขเท่านั้นครับ!");
-      return;
-    }
+  function addHolding() {
+    setFormError("");
+    if (!symbol) { setFormError("กรุณากรอก Symbol เช่น AAPL, BTC"); return; }
+    if (!shares) { setFormError("กรุณากรอกจำนวนหุ้น / เหรียญ"); return; }
+    if (!cost)   { setFormError("กรุณากรอกต้นทุนต่อหน่วย (USD)"); return; }
+
+    const numShares = parseFloat(shares.toString().replace(/[^0-9.]/g, ""));
+    const numCost   = parseFloat(cost.toString().replace(/[^0-9.]/g, ""));
+
+    if (isNaN(numShares) || numShares <= 0) { setFormError("จำนวนหุ้นต้องเป็นตัวเลขและมากกว่า 0"); return; }
+    if (isNaN(numCost)   || numCost <= 0)   { setFormError("ต้นทุนต้องเป็นตัวเลขและมากกว่า 0"); return; }
 
     const symUpper = symbol.toUpperCase();
     setPortfolio(prev => {
       const existing = prev.find(p => p.symbol === symUpper);
       if (existing) {
         const totalCostBefore = parseFloat(existing.shares) * parseFloat(existing.avgCost);
-        const totalCostAdded  = numShares * numCost;
         const newShares       = parseFloat(existing.shares) + numShares;
-        const newAvgCost      = (totalCostBefore + totalCostAdded) / newShares;
+        const newAvgCost      = (totalCostBefore + numShares * numCost) / newShares;
         return prev.map(p => p.symbol === symUpper ? { ...p, shares: newShares, avgCost: newAvgCost } : p);
       } else {
         return [...prev, { symbol: symUpper, shares: numShares, avgCost: numCost, exchange: exch }];
       }
     });
-    setSymbol(""); setShares(""); setCost("");
+    setSymbol(""); setShares(""); setCost(""); setFormError("");
   }
 
   function deleteHolding(sym) {
-    if (window.confirm(`ต้องการลบหุ้น ${sym} ออกจากพอร์ตใช่หรือไม่?`)) {
+    if (window.confirm(`⚠️ ต้องการลบหุ้น ${sym} ออกจากพอร์ตใช่หรือไม่?\n\nการดำเนินการนี้ไม่สามารถย้อนกลับได้`)) {
       setPortfolio(prev => prev.filter(p => p.symbol !== sym));
     }
   }
 
   const rows = portfolio.map(p => {
     const px = livePrices[p.symbol];
-    const currentPrice = parseFloat(px?.price || p.avgCost) || 0;
+    const currentPrice = parseFloat(px?.price) || 0;
+    const liveAvailable = currentPrice > 0;
+    const displayPrice = liveAvailable ? currentPrice : parseFloat(p.avgCost) || 0;
     const isCrypto = p.exchange === "CRYPTO";
-    const sh = parseFloat(p.shares) || 0;
-    const avgC = parseFloat(p.avgCost) || 0;
-    const mktVal  = currentPrice * sh * (isCrypto ? 1 : safeRate);
+    const sh    = parseFloat(p.shares) || 0;
+    const avgC  = parseFloat(p.avgCost) || 0;
+    const mktVal  = displayPrice * sh * (isCrypto ? 1 : safeRate);
     const costVal = avgC * sh * (isCrypto ? 1 : safeRate);
-    const pnl     = mktVal - costVal;
-    const pnlPct  = costVal !== 0 ? (pnl / costVal) * 100 : 0;
-    return { ...p, currentPrice, mktVal, costVal, pnl, pnlPct, change: parseFloat(px?.change) || 0, pct: parseFloat(px?.pct) || 0 };
+    const pnl     = liveAvailable ? mktVal - costVal : 0;
+    const pnlPct  = (liveAvailable && costVal !== 0) ? (pnl / costVal) * 100 : 0;
+    return { ...p, currentPrice: displayPrice, mktVal, costVal, pnl, pnlPct, liveAvailable, change: parseFloat(px?.change) || 0, pct: parseFloat(px?.pct) || 0 };
   });
 
-  const totalVal  = rows.reduce((s, r) => s + (parseFloat(r.mktVal) || 0), 0);
-  const totalCost = rows.reduce((s, r) => s + (parseFloat(r.costVal) || 0), 0);
+  const totalVal  = rows.reduce((s, r) => s + (r.mktVal || 0), 0);
+  const totalCost = rows.reduce((s, r) => s + (r.costVal || 0), 0);
   const totalPnL  = totalVal - totalCost;
+
+  const fileInputRef = useRef(null);
 
   return (
     <div className="gap-16">
@@ -1171,7 +1289,9 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
         <div className="card metric-card" style={{ "--accent": "#a78bfa" }}>
           <div className="card-glow" />
           <div className="card-title">มูลค่าพอร์ตรวม (THB)</div>
-          <div className="metric-val" style={{ fontSize: isLoadingPrices ? "18px" : undefined }}>{isLoadingPrices ? "กำลังโหลด..." : `฿${fmt(totalVal)}`}</div>
+          <div className="metric-val" style={{ fontSize: isLoadingPrices ? "18px" : undefined }}>
+            {isLoadingPrices ? "กำลังโหลด..." : `฿${fmt(totalVal)}`}
+          </div>
           <div className="metric-sub">{isLoadingPrices ? "รอข้อมูล API..." : "รวมกำไร/ขาดทุนแล้ว"}</div>
         </div>
 
@@ -1185,7 +1305,7 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
         <div className="card metric-card" style={{ "--accent": totalPnL >= 0 ? "#05e29c" : "#ff3d6b" }}>
           <div className="card-glow" />
           <div className="card-title">กำไร / ขาดทุน (P&L)</div>
-          <div className="metric-val" style={{ color: totalPnL >= 0 && !isLoadingPrices ? "var(--green)" : "var(--red)", fontSize: isLoadingPrices ? "18px" : undefined }}>
+          <div className="metric-val" style={{ color: totalPnL >= 0 && !isLoadingPrices ? "var(--green)" : isLoadingPrices ? undefined : "var(--red)", fontSize: isLoadingPrices ? "18px" : undefined }}>
             {isLoadingPrices ? "กำลังโหลด..." : `${totalPnL >= 0 ? "+" : ""}฿${fmt(totalPnL)}`}
           </div>
           <div className={`metric-badge ${totalPnL >= 0 ? "badge-green" : "badge-red"}`}>
@@ -1197,182 +1317,218 @@ function PortfolioTab({ portfolio, setPortfolio, livePrices, isLoadingPrices, ex
           <div className="card-glow" />
           <div className="card-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>USD/THB RATE</span>
-                        {/* 🔄 ปุ่มกดบังคับดึงเรทเงินเองทันที */}
-<button 
-  onClick={async (e) => {
-    const btn = e.currentTarget;
-
-    btn.style.opacity = "0.5";
-    btn.innerText = "⏳";
-
-    try {
-      // ✅ realtime exchange API
-      const res = await fetch("https://open.er-api.com/v6/latest/USD");
-
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
-      const data = await res.json();
-
-      // ✅ ตรวจ response ให้ปลอดภัยขึ้น
-      if (
-        data &&
-        data.result === "success" &&
-        data.rates &&
-        typeof data.rates.THB === "number"
-      ) {
-        const liveRate = parseFloat(data.rates.THB);
-
-        if (!isNaN(liveRate)) {
-          setExchangeRate(liveRate);
-
-          console.log("✅ อัปเดตเรทล่าสุด:", liveRate);
-        }
-      } else {
-        console.error("❌ API response ไม่ถูกต้อง", data);
-      }
-    } catch (err) {
-      console.error("❌ ดึงเรทไม่สำเร็จ:", err);
-    }
-
-    setTimeout(() => {
-      btn.style.opacity = "1";
-      btn.innerText = "🔄";
-    }, 500);
-  }} 
-  style={{ 
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    fontSize: "12px",
-    filter: "grayscale(100%) brightness(200%)"
-  }}
-  title="ดึงเรทล่าสุดเดี๋ยวนี้"
->
-  🔄
-</button>
+            <button
+              onClick={async (e) => {
+                const btn = e.currentTarget;
+                btn.style.opacity = "0.5"; btn.innerText = "⏳";
+                try {
+                  const res  = await fetch("https://open.er-api.com/v6/latest/USD");
+                  const data = await res.json();
+                  if (data?.result === "success" && typeof data.rates?.THB === "number") {
+                    setExchangeRate(parseFloat(data.rates.THB));
+                  }
+                } catch (err) { console.error("❌ ดึงเรทไม่สำเร็จ:", err); }
+                setTimeout(() => { btn.style.opacity = "1"; btn.innerText = "🔄"; }, 500);
+              }}
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: "12px", filter: "grayscale(100%) brightness(200%)" }}
+              title="ดึงเรทล่าสุดเดี๋ยวนี้">🔄</button>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "4px", marginTop: "4px" }}>
             <span style={{ fontSize: "26px", fontWeight: 700, fontFamily: "var(--font-head)", color: "var(--gold)" }}>฿</span>
             <input type="number" step="0.01" value={exchangeRate} onChange={e => setExchangeRate(parseFloat(e.target.value) || 0)} className="exchange-input" />
           </div>
-          <div className="metric-sub">ดึงล่าสุดเมื่อสลับหน้าจอ (หรือกด 🔄)</div>
+          <div className="metric-sub">อัพเดตอัตโนมัติ (หรือกด 🔄)</div>
         </div>
       </div>
 
-      <div className="card">
-        <div className="card-title">ราคาตลาด REAL-TIME · FINNHUB {isLoadingPrices && "⏳ กำลังอัปเดต..."}</div>
-        <div className="grid-3">
-          {/* เปลี่ยนจากล็อกชื่อ 3 ตัว เป็นดึงตามหุ้นที่มีในพอร์ต (ไม่ซ้ำตัว) */}
-          {[...new Set(portfolio.filter(p => p.exchange !== "CRYPTO").map(p => p.symbol))].map(sym => {
-            const d = livePrices[sym];
-            if (!d) return null;
-            const pct = parseFloat(d.pct) || 0;
-            const change = parseFloat(d.change) || 0;
-            return (
-              <div key={sym} style={{ padding: "16px", borderRadius: "12px", background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
-                <div className="ticker-card">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div>
-                      <div className="ticker-sym">{sym}</div>
-                      <div className="ticker-name">{d.name}</div>
+      {/* LIVE PRICES */}
+      {portfolio.filter(p => p.exchange !== "CRYPTO").length > 0 && (
+        <div className="card">
+          <div className="card-title">ราคาตลาด REAL-TIME · FINNHUB {isLoadingPrices && "⏳ กำลังอัปเดต..."}</div>
+          <div className="grid-3">
+            {[...new Set(portfolio.filter(p => p.exchange !== "CRYPTO").map(p => p.symbol))].map(sym => {
+              const d = livePrices[sym];
+              if (!d || !d.price) return (
+                <div key={sym} style={{ padding: "16px", borderRadius: "12px", background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
+                  <div className="ticker-sym">{sym}</div>
+                  <div className="ticker-price" style={{ fontSize: 14, color: "var(--text2)" }}>ไม่มีข้อมูล live</div>
+                  <div style={{ fontSize: 11, color: "var(--text3)", fontFamily: "var(--font-mono)", marginTop: 4 }}>ใช้ราคาต้นทุนแทน</div>
+                </div>
+              );
+              const pct = parseFloat(d.pct) || 0;
+              const change = parseFloat(d.change) || 0;
+              return (
+                <div key={sym} style={{ padding: "16px", borderRadius: "12px", background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
+                  <div className="ticker-card">
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div>
+                        <div className="ticker-sym">{sym}</div>
+                        <div className="ticker-name">{d.name || sym}</div>
+                      </div>
+                      {!isLoadingPrices && (
+                        <div className={`metric-badge ${change >= 0 ? "badge-green" : "badge-red"}`} style={{ marginTop: 0 }}>
+                          {pct >= 0 ? "+" : ""}{pct.toFixed(2)}%
+                        </div>
+                      )}
                     </div>
+                    <div className="ticker-price">{isLoadingPrices ? "..." : `$${fmt(d.price, 2)}`}</div>
                     {!isLoadingPrices && (
-                      <div className={`metric-badge ${change >= 0 ? "badge-green" : "badge-red"}`} style={{ marginTop: 0 }}>
-                        {pct >= 0 ? "+" : ""}{pct.toFixed(2)}%
+                      <div className={`ticker-change ${change >= 0 ? "up" : "dn"}`}>
+                        {change >= 0 ? "▲" : "▼"} {Math.abs(change).toFixed(2)}
                       </div>
                     )}
                   </div>
-                  <div className="ticker-price">{isLoadingPrices ? "..." : `$${fmt(d.price, 2)}`}</div>
-                  {!isLoadingPrices && (
-                    <div className={`ticker-change ${change >= 0 ? "up" : "dn"}`}>
-                      {change >= 0 ? "▲" : "▼"} {Math.abs(change).toFixed(2)}
-                    </div>
-                  )}
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
+      {/* PORTFOLIO TABLE */}
       <div className="card">
         <div className="section-header">
-          <span className="section-title">หุ้น Dime ที่ถือ</span>
+          <span className="section-title">หุ้น Dime ที่ถือ ({portfolio.length} รายการ)</span>
+          <div className="row" style={{ gap: 8 }}>
+            <input ref={fileInputRef} type="file" accept=".json" style={{ display: "none" }} onChange={onImport} />
+            <button className="btn btn-ghost" style={{ fontSize: 11, padding: "7px 14px" }} onClick={onExport}>⬇️ Export</button>
+            <button className="btn btn-ghost" style={{ fontSize: 11, padding: "7px 14px" }} onClick={() => fileInputRef.current?.click()}>⬆️ Import</button>
+          </div>
         </div>
-        <div style={{ overflowX: "auto" }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>ชื่อ</th>
-                <th>Exchange</th>
-                <th className="text-right">จำนวน</th>
-                <th className="text-right">ต้นทุน/หน่วย</th>
-                <th className="text-right">ราคาปัจจุบัน</th>
-                <th className="text-right">มูลค่า (฿)</th>
-                <th className="text-right">P&L</th>
-                <th className="text-right">จัดการ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 && (
-                <tr><td colSpan="8" style={{ textAlign: "center", color: "var(--text2)", padding: "28px", fontFamily: "var(--font-mono)", fontSize: 12 }}>ยังไม่มีหุ้นในพอร์ต</td></tr>
-              )}
+
+        {portfolio.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">📈</div>
+            <div className="empty-title">ยังไม่มีหุ้นในพอร์ต</div>
+            <div className="empty-sub">เพิ่มหุ้นตัวแรกด้านล่าง เพื่อเริ่มติดตาม P&L ของคุณ</div>
+          </div>
+        ) : (
+          <>
+            {/* Desktop Table */}
+            <div className="port-table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>ชื่อ</th><th>Exchange</th><th className="text-right">จำนวน</th>
+                    <th className="text-right">ต้นทุน/หน่วย</th><th className="text-right">ราคาปัจจุบัน</th>
+                    <th className="text-right">มูลค่า (฿)</th><th className="text-right">P&L</th><th className="text-right">จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r, i) => (
+                    <tr key={i}>
+                      <td style={{ fontFamily: "var(--font-head)", fontWeight: 700, letterSpacing: "-0.01em" }}>{r.symbol}</td>
+                      <td><span className={`tag ${r.exchange === "CRYPTO" ? "tag-gold" : "tag-blue"}`}>{r.exchange}</span></td>
+                      <td className="text-right text-mono">{r.shares}</td>
+                      <td className="text-right text-mono">${fmt(r.avgCost, 2)}</td>
+                      <td className="text-right text-mono">
+                        {isLoadingPrices ? "..." : r.liveAvailable ? `$${fmt(r.currentPrice, 2)}` : <span style={{ color: "var(--text3)", fontSize: 11 }}>N/A</span>}
+                      </td>
+                      <td className="text-right" style={{ fontFamily: "var(--font-head)", fontWeight: 600 }}>
+                        {isLoadingPrices ? "..." : `฿${fmt(r.mktVal)}`}
+                      </td>
+                      <td className="text-right" style={{ fontFamily: "var(--font-head)", fontWeight: 700, color: r.pnl >= 0 && r.liveAvailable && !isLoadingPrices ? "var(--green)" : r.liveAvailable && !isLoadingPrices ? "var(--red)" : "var(--text2)" }}>
+                        {isLoadingPrices ? "..." : r.liveAvailable ? (
+                          <>
+                            {r.pnl >= 0 ? "+" : ""}฿{fmt(r.pnl)}<br />
+                            <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 400 }}>
+                              ({r.pnl >= 0 ? "+" : ""}{r.pnlPct.toFixed(1)}%)
+                            </span>
+                          </>
+                        ) : <span style={{ color: "var(--text3)", fontSize: 11 }}>รอราคา live</span>}
+                      </td>
+                      <td className="text-right">
+                        <button className="btn-action" onClick={() => deleteHolding(r.symbol)} title="ลบ">🗑️</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="port-cards">
               {rows.map((r, i) => (
-                <tr key={i}>
-                  <td style={{ fontFamily: "var(--font-head)", fontWeight: 700, letterSpacing: "-0.01em" }}>{r.symbol}</td>
-                  <td><span className={`tag ${r.exchange === "CRYPTO" ? "tag-gold" : "tag-blue"}`}>{r.exchange}</span></td>
-                  <td className="text-right text-mono">{r.shares}</td>
-                  <td className="text-right text-mono">${fmt(r.avgCost, 2)}</td>
-                  <td className="text-right text-mono">{isLoadingPrices ? "..." : `$${fmt(r.currentPrice, 2)}`}</td>
-                  <td className="text-right" style={{ fontFamily: "var(--font-head)", fontWeight: 600 }}>{isLoadingPrices ? "..." : `฿${fmt(r.mktVal)}`}</td>
-                  <td className="text-right" style={{ fontFamily: "var(--font-head)", fontWeight: 700, color: r.pnl >= 0 && !isLoadingPrices ? "var(--green)" : "var(--red)" }}>
-                    {isLoadingPrices ? "..." : (
-                      <>
-                        {r.pnl >= 0 ? "+" : ""}฿{fmt(r.pnl)}<br />
-                        <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", fontWeight: 400 }}>({r.pnl >= 0 ? "+" : ""}{parseFloat(r.pnlPct || 0).toFixed(1)}%)</span>
-                      </>
-                    )}
-                  </td>
-                  <td className="text-right">
-                    <button className="btn-action" onClick={() => deleteHolding(r.symbol)} title="ลบ">🗑️</button>
-                  </td>
-                </tr>
+                <div key={i} className="port-card">
+                  <div className="port-card-header">
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div className="port-card-sym">{r.symbol}</div>
+                      <span className={`tag ${r.exchange === "CRYPTO" ? "tag-gold" : "tag-blue"}`}>{r.exchange}</span>
+                    </div>
+                    <div className="port-card-actions">
+                      <button className="btn-action" onClick={() => deleteHolding(r.symbol)}>🗑️</button>
+                    </div>
+                  </div>
+                  <div className="port-card-grid">
+                    <div className="port-card-stat">
+                      <div className="port-card-label">จำนวน</div>
+                      <div className="port-card-val">{r.shares} หุ้น</div>
+                    </div>
+                    <div className="port-card-stat">
+                      <div className="port-card-label">ต้นทุน/หน่วย</div>
+                      <div className="port-card-val">${fmt(r.avgCost, 2)}</div>
+                    </div>
+                    <div className="port-card-stat">
+                      <div className="port-card-label">ราคาปัจจุบัน</div>
+                      <div className="port-card-val">
+                        {isLoadingPrices ? "..." : r.liveAvailable ? `$${fmt(r.currentPrice, 2)}` : "N/A"}
+                      </div>
+                    </div>
+                    <div className="port-card-stat">
+                      <div className="port-card-label">มูลค่า (THB)</div>
+                      <div className="port-card-val">{isLoadingPrices ? "..." : `฿${fmt(r.mktVal)}`}</div>
+                    </div>
+                    <div className="port-card-stat" style={{ gridColumn: "span 2" }}>
+                      <div className="port-card-label">P&L</div>
+                      <div className="port-card-val" style={{ color: r.pnl >= 0 && r.liveAvailable && !isLoadingPrices ? "var(--green)" : r.liveAvailable && !isLoadingPrices ? "var(--red)" : "var(--text2)" }}>
+                        {isLoadingPrices ? "..." : r.liveAvailable
+                          ? `${r.pnl >= 0 ? "+" : ""}฿${fmt(r.pnl)} (${r.pnl >= 0 ? "+" : ""}${r.pnlPct.toFixed(1)}%)`
+                          : "รอราคา live"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </>
+        )}
       </div>
 
+      {/* ADD FORM */}
       <div className="card">
-        <div className="card-title">เพิ่ม / แก้ไข Portfolio (ใส่หุ้นเดิมเพื่อถัวเฉลี่ย)</div>
+        <div className="card-title">เพิ่ม / ถัวเฉลี่ยต้นทุน</div>
+        {existingSym && (
+          <div className="inp-hint warn" style={{ marginBottom: 12 }}>
+            ⚡ {symbol.toUpperCase()} มีอยู่แล้ว ({existingSym.shares} หุ้น @ ${fmt(existingSym.avgCost, 2)}) — จะถัวเฉลี่ยต้นทุนโดยอัตโนมัติ
+          </div>
+        )}
         <div className="input-row">
-          <input className="inp" placeholder="Symbol (เช่น AAPL, BTC)" value={symbol} onChange={e => setSymbol(e.target.value)} />
-          <input className="inp" type="number" placeholder="จำนวนหุ้น / เหรียญ" value={shares} onChange={e => setShares(e.target.value)} />
-          <input className="inp" type="number" placeholder="ต้นทุนต่อหน่วย (USD)" value={cost} onChange={e => setCost(e.target.value)} />
+          <input className={`inp ${formError && !symbol ? "inp-error" : ""}`} placeholder="Symbol (เช่น AAPL, BTC)" value={symbol} onChange={e => { setSymbol(e.target.value); setFormError(""); }} />
+          <input className={`inp ${formError && !shares ? "inp-error" : ""}`} type="number" placeholder="จำนวนหุ้น / เหรียญ" value={shares} onChange={e => { setShares(e.target.value); setFormError(""); }} />
+          <input className={`inp ${formError && !cost ? "inp-error" : ""}`} type="number" placeholder="ต้นทุนต่อหน่วย (USD)" value={cost} onChange={e => { setCost(e.target.value); setFormError(""); }} />
           <select className="inp" value={exch} onChange={e => setExch(e.target.value)}>
             <option value="US">🇺🇸 US</option>
             <option value="CRYPTO">₿ Crypto</option>
           </select>
           <button className="btn btn-blue" onClick={addHolding}>+ เพิ่ม</button>
         </div>
+        {formError && <div style={{ color: "var(--red)", fontSize: 12, fontFamily: "var(--font-mono)", marginTop: -4, marginBottom: 8 }}>⚠️ {formError}</div>}
       </div>
     </div>
   );
 }
 
 function BudgetTab({ txs }) {
-  const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย."];
+  const months  = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย."];
   const actuals = [0, 0, 0, 0, 0];
   const forecast = [0, 0, 0, 0, 0, 0];
   const spent = {};
   txs.filter(t => (parseFloat(t.amount) || 0) < 0 && t.date && t.date.startsWith(new Date().toISOString().slice(0, 7))).forEach(t => {
     spent[t.cat] = (spent[t.cat] || 0) + Math.abs(parseFloat(t.amount) || 0);
   });
-  const fixCost = txs.filter(t => t.type === "fix" && (parseFloat(t.amount) || 0) < 0).reduce((s, t) => s + Math.abs(parseFloat(t.amount) || 0), 0);
-  const varCost = txs.filter(t => t.type === "var" && (parseFloat(t.amount) || 0) < 0).reduce((s, t) => s + Math.abs(parseFloat(t.amount) || 0), 0);
-  
+  const fixCost = txs.filter(t => t.type === "fix"  && (parseFloat(t.amount) || 0) < 0).reduce((s, t) => s + Math.abs(parseFloat(t.amount) || 0), 0);
+  const varCost = txs.filter(t => t.type === "var"  && (parseFloat(t.amount) || 0) < 0).reduce((s, t) => s + Math.abs(parseFloat(t.amount) || 0), 0);
+
   return (
     <div className="gap-16">
       <div className="grid-2">
@@ -1395,11 +1551,11 @@ function BudgetTab({ txs }) {
       <div className="card">
         <div className="section-title" style={{ marginBottom: 20 }}>งบประมาณแต่ละหมวด</div>
         {BUDGETS.map(b => {
-          const cat = CATEGORIES[b.cat];
-          const s   = parseFloat(spent[b.cat]) || 0;
+          const cat   = CATEGORIES[b.cat];
+          const s     = parseFloat(spent[b.cat]) || 0;
           const limit = parseFloat(b.limit) || 1;
-          const pct = Math.min((s / limit) * 100, 100);
-          const over = s > limit;
+          const pct   = Math.min((s / limit) * 100, 100);
+          const over  = s > limit;
           return (
             <div key={b.cat} className="budget-item">
               <div className="budget-header">
@@ -1422,7 +1578,7 @@ function BudgetTab({ txs }) {
         <div className="card-title">คาดการณ์รายจ่าย 6 เดือน (รอเก็บข้อมูล)</div>
         <div style={{ display: "flex", gap: 8, alignItems: "flex-end", height: 100 }}>
           {actuals.concat([forecast[forecast.length - 1]]).map((v, i) => {
-            const max       = Math.max(...actuals, forecast[forecast.length - 1], 1);
+            const max        = Math.max(...actuals, 1);
             const isForecast = i === actuals.length;
             return (
               <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
@@ -1434,13 +1590,6 @@ function BudgetTab({ txs }) {
               </div>
             );
           })}
-        </div>
-        <div className="divider" />
-        <div className="row">
-          <div style={{ width: 10, height: 10, borderRadius: 3, background: "var(--red)" }} />
-          <span style={{ fontSize: 11, color: "var(--text2)", fontFamily: "var(--font-mono)" }}>รายจ่ายจริง</span>
-          <div style={{ width: 10, height: 10, borderRadius: 3, background: "rgba(75,143,255,0.4)", border: "1px dashed rgba(75,143,255,0.6)" }} />
-          <span style={{ fontSize: 11, color: "var(--text2)", fontFamily: "var(--font-mono)" }}>คาดการณ์ (ค่าเฉลี่ย)</span>
         </div>
       </div>
     </div>
@@ -1459,128 +1608,230 @@ const TABS = [
 ];
 
 export default function App() {
-  const [user, setUser] = useState(() => localStorage.getItem("tw_user") || null);
+  // ── Auth ──────────────────────────────────────────────────
+  const [user, setUser]                 = useState(() => localStorage.getItem(LS.USER) || null);
   const [usernameInput, setUsernameInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
-  const [loginError, setLoginError] = useState(false);
+  const [loginError, setLoginError]     = useState(false);
 
-  const [activeTab, setActiveTab] = useState(() => localStorage.getItem("tw_tab") || "dashboard");
-  const [txs, setTxs] = useState([]);
-  const [portfolio, setPortfolio] = useState([]);
-  const [exchangeRate, setExchangeRate] = useState(32.54);
-  const [loading, setLoading] = useState(true);
-  const [livePrices, setLivePrices] = useState({ ...MOCK_PRICES, ...MOCK_CRYPTO });
+  // ── UI state ──────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem(LS.TAB) || "dashboard");
+
+  // ── Data — initialise immediately from localStorage cache ─
+  // This prevents a blank flash before Firebase loads and is
+  // the primary defence against data appearing lost.
+  const [txs, setTxsState]             = useState(() => lsGet(LS.TXS, []));
+  const [portfolio, setPortfolioState] = useState(() => lsGet(LS.PORTFOLIO, []));
+  const [exchangeRate, setExchangeRateState] = useState(() => {
+    const r = lsGet(LS.RATE, null);
+    return (typeof r === "number" && !isNaN(r)) ? r : 32.54;
+  });
+
+  // ── Sync / loading state ──────────────────────────────────
+  const [loading, setLoading]     = useState(true);   // Firebase initial load
+  const [syncState, setSyncState] = useState("live"); // "live" | "cache" | "offline"
+  const [lastSaved, setLastSaved] = useState(() => {
+    const ts = localStorage.getItem(LS.LAST_SAVE);
+    return ts ? new Date(ts) : null;
+  });
+
+  // ── Live prices ───────────────────────────────────────────
+  const [livePrices, setLivePrices]       = useState({ ...MOCK_PRICES, ...MOCK_CRYPTO });
   const [isLoadingPrices, setIsLoadingPrices] = useState(true);
 
-  useEffect(() => { localStorage.setItem("tw_tab", activeTab); }, [activeTab]);
+  // ── Refs ──────────────────────────────────────────────────
+  const initialLoadDone = useRef(false); // true once first Firestore snapshot is processed
 
+  // ── Persist active tab ────────────────────────────────────
+  useEffect(() => { localStorage.setItem(LS.TAB, activeTab); }, [activeTab]);
+
+  // ── Core helper: save to localStorage ────────────────────
+  const persistToCache = useCallback((newTxs, newPortfolio, newRate) => {
+    if (newTxs      !== undefined) lsSet(LS.TXS,       newTxs);
+    if (newPortfolio !== undefined) lsSet(LS.PORTFOLIO,  newPortfolio);
+    if (newRate      !== undefined) lsSet(LS.RATE,       newRate);
+    const now = new Date();
+    localStorage.setItem(LS.LAST_SAVE, now.toISOString());
+    setLastSaved(now);
+  }, []);
+
+  // ── Firebase onSnapshot — FIXED VERSION ──────────────────
   useEffect(() => {
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
+
     setLoading(true);
-    const unsub = onSnapshot(doc(db, "users", user), (res) => {
-      if (res.exists()) {
-        const data = res.data();
-        setTxs(data.txs || []);
-        setPortfolio(data.portfolio || []);
-        const rawRate = parseFloat(data.exchangeRate);
-        setExchangeRate(!isNaN(rawRate) ? rawRate : 32.54);
+    initialLoadDone.current = false;
+
+    // Fallback: if Firebase doesn't respond in 5 s, show cached data
+    const timeoutId = setTimeout(() => {
+      if (!initialLoadDone.current) {
+        console.warn("⏰ Firebase timeout — using localStorage cache");
+        setLoading(false);
+        setSyncState("offline");
+        initialLoadDone.current = true;
       }
-      setLoading(false);
-    });
-    return () => unsub();
+    }, 5000);
+
+    const unsub = onSnapshot(
+      doc(db, "users", user),
+      (snap) => {
+        clearTimeout(timeoutId);
+
+        if (snap.exists()) {
+          const data = snap.data();
+          const fsPortfolio = Array.isArray(data.portfolio) ? data.portfolio : null;
+          const fsTxs       = Array.isArray(data.txs)       ? data.txs       : null;
+          const fsRate      = typeof data.exchangeRate === "number" ? data.exchangeRate : null;
+
+          if (!initialLoadDone.current) {
+            // ── FIRST LOAD ──────────────────────────────────
+            // Strategy: prefer Firestore if it has data.
+            // If Firestore field is missing/undefined but localStorage has data,
+            // keep the cached data and re-sync it back to Firestore.
+            const cachedPortfolio = lsGet(LS.PORTFOLIO, []);
+            const cachedTxs       = lsGet(LS.TXS, []);
+
+            let resolvedPortfolio = cachedPortfolio;
+            let resolvedTxs       = cachedTxs;
+            let needsResync       = false;
+
+            if (fsPortfolio !== null && fsPortfolio.length >= cachedPortfolio.length) {
+              // Firestore has equal or more data — trust it
+              resolvedPortfolio = fsPortfolio;
+            } else if (fsPortfolio !== null && fsPortfolio.length < cachedPortfolio.length) {
+              // Firestore has LESS data than cache — merge: take union by symbol
+              const merged = [...fsPortfolio];
+              cachedPortfolio.forEach(cp => {
+                if (!merged.find(fp => fp.symbol === cp.symbol)) merged.push(cp);
+              });
+              resolvedPortfolio = merged;
+              needsResync = true;
+              console.warn("🔀 Portfolio merge: cache had more items than Firestore — merged & re-syncing");
+            } else if (fsPortfolio === null && cachedPortfolio.length > 0) {
+              // Firestore field doesn't exist yet — keep cache, write it back
+              resolvedPortfolio = cachedPortfolio;
+              needsResync = true;
+              console.warn("💾 Portfolio field missing in Firestore — restoring from cache");
+            }
+
+            if (fsTxs !== null && fsTxs.length >= cachedTxs.length) {
+              resolvedTxs = fsTxs;
+            } else if (fsTxs !== null && fsTxs.length < cachedTxs.length) {
+              // Merge by id
+              const mergedTxs = [...fsTxs];
+              cachedTxs.forEach(ct => {
+                if (!mergedTxs.find(ft => ft.id === ct.id)) mergedTxs.push(ct);
+              });
+              resolvedTxs = mergedTxs;
+              needsResync = true;
+            } else if (fsTxs === null && cachedTxs.length > 0) {
+              resolvedTxs = cachedTxs;
+              needsResync = true;
+            }
+
+            setPortfolioState(resolvedPortfolio);
+            setTxsState(resolvedTxs);
+            if (fsRate !== null && !isNaN(fsRate)) setExchangeRateState(fsRate);
+
+            // Persist resolved data to cache
+            persistToCache(resolvedTxs, resolvedPortfolio, fsRate || exchangeRate);
+
+            // Re-sync merged data back to Firestore if needed
+            if (needsResync) {
+              setDoc(doc(db, "users", user), {
+                portfolio: resolvedPortfolio,
+                txs: resolvedTxs,
+              }, { merge: true }).then(() => {
+                console.log("✅ Re-synced merged data back to Firestore");
+              });
+            }
+
+            initialLoadDone.current = true;
+            setLoading(false);
+            setSyncState("live");
+
+          } else {
+            // ── SUBSEQUENT REAL-TIME UPDATES ─────────────────
+            // Only update if Firestore actually sent a field (not missing)
+            if (fsPortfolio !== null) {
+              setPortfolioState(fsPortfolio);
+              lsSet(LS.PORTFOLIO, fsPortfolio);
+            }
+            if (fsTxs !== null) {
+              setTxsState(fsTxs);
+              lsSet(LS.TXS, fsTxs);
+            }
+            if (fsRate !== null && !isNaN(fsRate)) {
+              setExchangeRateState(fsRate);
+              lsSet(LS.RATE, fsRate);
+            }
+            setSyncState("live");
+          }
+        } else {
+          // Document doesn't exist yet — keep cached data, will be created on first write
+          initialLoadDone.current = true;
+          setLoading(false);
+          setSyncState("live");
+        }
+      },
+      (error) => {
+        // Firebase error — fall back to cache, don't wipe data
+        clearTimeout(timeoutId);
+        console.error("🔥 Firebase error:", error);
+        setLoading(false);
+        setSyncState("offline");
+        initialLoadDone.current = true;
+      }
+    );
+
+    return () => { unsub(); clearTimeout(timeoutId); };
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Auto-fetch exchange rate ──────────────────────────────
+  useEffect(() => {
+    let lastFetchTime = 0;
+    const FRESHNESS = 5 * 60 * 1000;
+
+    async function fetchRate() {
+      const now = Date.now();
+      if (now - lastFetchTime < FRESHNESS && lastFetchTime !== 0) return;
+      if (!user) return;
+      try {
+        const res  = await fetch("https://open.er-api.com/v6/latest/USD");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.result === "success" && typeof data.rates?.THB === "number") {
+          const rate = parseFloat(data.rates.THB);
+          if (!isNaN(rate)) {
+            setExchangeRateState(rate);
+            lsSet(LS.RATE, rate);
+            lastFetchTime = Date.now();
+            if (user) {
+              setDoc(doc(db, "users", user), { exchangeRate: rate, exchangeUpdatedAt: new Date().toISOString() }, { merge: true });
+            }
+          }
+        }
+      } catch (err) { console.error("❌ Exchange rate fetch failed:", err); }
+    }
+
+    fetchRate();
+    window.addEventListener("focus", fetchRate);
+    const iv = setInterval(fetchRate, 10 * 60 * 1000);
+    return () => { window.removeEventListener("focus", fetchRate); clearInterval(iv); };
   }, [user]);
 
-    // 🌐 ระบบดึงเรทเงินอัจฉริยะ
-useEffect(() => {
-  let lastFetchTime = 0;
-  const FRESHNESS_LIMIT = 5 * 60 * 1000; // 5 นาที (ให้ตรงกับ API update)
-
-  async function fetchLiveExchangeRate() {
-    const now = Date.now();
-    if (now - lastFetchTime < FRESHNESS_LIMIT && lastFetchTime !== 0) return;
-
-    if (!user) return;
-
-    try {
-      // ✅ ใช้ API realtime กว่าเดิม
-      const res = await fetch("https://open.er-api.com/v6/latest/USD");
-
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
-      const data = await res.json();
-
-      // ✅ เช็ค response ให้ปลอดภัยขึ้น
-      if (
-        data &&
-        data.result === "success" &&
-        data.rates &&
-        typeof data.rates.THB === "number"
-      ) {
-        const liveRate = parseFloat(data.rates.THB);
-
-        // กัน NaN
-        if (!isNaN(liveRate)) {
-          setExchangeRate(liveRate);
-
-          await setDoc(
-            doc(db, "users", user),
-            { 
-              exchangeRate: liveRate,
-              exchangeUpdatedAt: new Date().toISOString()
-            },
-            { merge: true }
-          );
-
-          lastFetchTime = Date.now();
-
-          console.log("✅ อัปเดตค่าเงินล่าสุด:", liveRate);
-        }
-      } else {
-        console.error("❌ รูปแบบข้อมูล API ไม่ถูกต้อง", data);
-      }
-    } catch (err) {
-      console.error("❌ ดึงค่าเงินอัตโนมัติไม่สำเร็จ:", err);
-    }
-  }
-
-  fetchLiveExchangeRate();
-
-  // รีเฟรชตอนกลับมาโฟกัสหน้าเว็บ
-  window.addEventListener("focus", fetchLiveExchangeRate);
-
-  // สำรองรีเฟรชทุก 10 นาที
-  const interval = setInterval(fetchLiveExchangeRate, 10 * 60 * 1000);
-
-  return () => {
-    window.removeEventListener("focus", fetchLiveExchangeRate);
-    clearInterval(interval);
-  };
-}, [user]);
-
-
-  // 📈 ระบบดึงราคาหุ้นตามพอร์ตจริง (ดึงเปอร์เซ็นต์ % มาให้ครบ)
+  // ── Live stock prices ─────────────────────────────────────
   useEffect(() => {
-    if (!user || portfolio.length === 0) {
-      setIsLoadingPrices(false);
-      return;
-    }
+    if (!user || portfolio.length === 0) { setIsLoadingPrices(false); return; }
+    setIsLoadingPrices(true);
     const API_KEY = "d7sandpr01qorsvi1jagd7sandpr01qorsvi1jb0";
-    const uniqueSymbols = [...new Set(portfolio.filter(p => p.exchange !== "CRYPTO").map(p => p.symbol))];
-    
-    Promise.all(uniqueSymbols.map(sym =>
+    const syms = [...new Set(portfolio.filter(p => p.exchange !== "CRYPTO").map(p => p.symbol))];
+
+    Promise.all(syms.map(sym =>
       fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${API_KEY}`)
         .then(r => r.json())
-        .then(d => ({ 
-          symbol: sym, 
-          price: parseFloat(d.c) || 0,
-          change: parseFloat(d.d) || 0,
-          pct: parseFloat(d.dp) || 0
-        }))
-        .catch(err => {
-          return { symbol: sym, price: 0, change: 0, pct: 0 };
-        })
+        .then(d => ({ symbol: sym, price: parseFloat(d.c) || 0, change: parseFloat(d.d) || 0, pct: parseFloat(d.dp) || 0, name: sym }))
+        .catch(() => ({ symbol: sym, price: 0, change: 0, pct: 0, name: sym }))
     )).then(results => {
       const newLive = {};
       results.forEach(r => { if (r.price > 0) newLive[r.symbol] = r; });
@@ -1589,38 +1840,144 @@ useEffect(() => {
     });
   }, [user, portfolio]);
 
-  const handleSetTxs = (action) => {
-    setTxs(prev => {
+  // ── Wrapped state setters — always sync to Firestore + cache
+  const handleSetTxs = useCallback((action) => {
+    setTxsState(prev => {
       const next = typeof action === "function" ? action(prev) : action;
-      if (user) setDoc(doc(db, "users", user), { txs: next }, { merge: true });
+      // Write to Firestore
+      if (user) {
+        setDoc(doc(db, "users", user), { txs: next }, { merge: true })
+          .then(() => {
+            const now = new Date();
+            localStorage.setItem(LS.LAST_SAVE, now.toISOString());
+            setLastSaved(now);
+          })
+          .catch(err => console.error("❌ Save txs failed:", err));
+      }
+      // Always write to localStorage
+      lsSet(LS.TXS, next);
+      const now = new Date();
+      localStorage.setItem(LS.LAST_SAVE, now.toISOString());
+      setLastSaved(now);
       return next;
     });
-  };
+  }, [user]);
 
-  const handleSetPortfolio = (action) => {
-    setPortfolio(prev => {
+  const handleSetPortfolio = useCallback((action) => {
+    setPortfolioState(prev => {
       const next = typeof action === "function" ? action(prev) : action;
-      if (user) setDoc(doc(db, "users", user), { portfolio: next }, { merge: true });
+      // Write to Firestore
+      if (user) {
+        setDoc(doc(db, "users", user), { portfolio: next }, { merge: true })
+          .then(() => {
+            const now = new Date();
+            localStorage.setItem(LS.LAST_SAVE, now.toISOString());
+            setLastSaved(now);
+          })
+          .catch(err => console.error("❌ Save portfolio failed:", err));
+      }
+      // Always write to localStorage
+      lsSet(LS.PORTFOLIO, next);
+      const now = new Date();
+      localStorage.setItem(LS.LAST_SAVE, now.toISOString());
+      setLastSaved(now);
       return next;
     });
-  };
+  }, [user]);
 
-  const handleSetExchangeRate = (val) => {
-    setExchangeRate(parseFloat(val) || 32.54);
-    if (user) setDoc(doc(db, "users", user), { exchangeRate: parseFloat(val) || 32.54 }, { merge: true });
-  };
+  const handleSetExchangeRate = useCallback((val) => {
+    const rate = parseFloat(val) || 32.54;
+    setExchangeRateState(rate);
+    lsSet(LS.RATE, rate);
+    if (user) setDoc(doc(db, "users", user), { exchangeRate: rate }, { merge: true });
+  }, [user]);
 
+  // ── Export JSON ───────────────────────────────────────────
+  const handleExport = useCallback(() => {
+    const data = {
+      exportedAt: new Date().toISOString(),
+      user,
+      txs,
+      portfolio,
+      exchangeRate,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = `threewit-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [txs, portfolio, exchangeRate, user]);
+
+  // ── Import JSON ───────────────────────────────────────────
+  const handleImport = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        const importedPortfolio = Array.isArray(data.portfolio) ? data.portfolio : [];
+        const importedTxs       = Array.isArray(data.txs)       ? data.txs       : [];
+
+        if (!window.confirm(
+          `📥 นำเข้าข้อมูลจากไฟล์ "${file.name}"\n\n` +
+          `• Portfolio: ${importedPortfolio.length} รายการ\n` +
+          `• Transactions: ${importedTxs.length} รายการ\n\n` +
+          `จะรวม (merge) กับข้อมูลปัจจุบัน — ยืนยันไหม?`
+        )) return;
+
+        // Merge portfolio by symbol
+        handleSetPortfolio(prev => {
+          const merged = [...prev];
+          importedPortfolio.forEach(ip => {
+            if (!merged.find(p => p.symbol === ip.symbol)) merged.push(ip);
+          });
+          return merged;
+        });
+        // Merge txs by id
+        handleSetTxs(prev => {
+          const merged = [...prev];
+          importedTxs.forEach(it => {
+            if (!merged.find(t => t.id === it.id)) merged.push(it);
+          });
+          return merged.sort((a, b) => b.id - a.id);
+        });
+
+        alert("✅ นำเข้าข้อมูลสำเร็จ!");
+      } catch (err) {
+        alert("❌ ไฟล์ JSON ไม่ถูกต้อง: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+    // Reset so same file can be re-imported
+    e.target.value = "";
+  }, [handleSetPortfolio, handleSetTxs]);
+
+  // ── Login ─────────────────────────────────────────────────
   const handleLogin = (e) => {
     e.preventDefault();
     if (AUTHORIZED_USERS[usernameInput] === passwordInput) {
       setUser(usernameInput);
-      localStorage.setItem("tw_user", usernameInput);
+      localStorage.setItem(LS.USER, usernameInput);
       setLoginError(false);
     } else {
       setLoginError(true);
     }
   };
 
+  // ── Logout ────────────────────────────────────────────────
+  const handleLogout = () => {
+    if (window.confirm("ออกจากระบบ? ข้อมูลจะถูกบันทึกไว้ใน Firebase ปลอดภัย")) {
+      localStorage.removeItem(LS.USER);
+      setUser(null);
+      initialLoadDone.current = false;
+      setSyncState("live");
+    }
+  };
+
+  // ── RENDER — Login ────────────────────────────────────────
   if (!user) {
     return (
       <div className="login-wrapper">
@@ -1650,10 +2007,14 @@ useEffect(() => {
     );
   }
 
+  // ── RENDER — Main App ─────────────────────────────────────
+  const syncLabel = syncState === "cache" ? "Cache" : syncState === "offline" ? "Offline" : "Live";
+
   return (
     <>
       <style>{styles}</style>
       <div className="app">
+        {/* NAVBAR */}
         <nav className="topnav">
           <div className="topnav-brand">
             <div className="topnav-logo">Th</div>
@@ -1663,11 +2024,27 @@ useEffect(() => {
             </div>
           </div>
           <div className="topnav-right">
-            <div className="topnav-sync"><div className="sync-dot" />Active</div>
-            <button className="logout-btn" onClick={() => { localStorage.removeItem("tw_user"); setUser(null); }}>Log Out</button>
+            {lastSaved && (
+              <span className="last-saved">💾 {fmtTime(lastSaved)}</span>
+            )}
+            <div className={`topnav-sync ${syncState}`}>
+              <div className={`sync-dot ${syncState}`} />
+              {syncLabel}
+            </div>
+            <button className="logout-btn" onClick={handleLogout}>Log Out</button>
           </div>
         </nav>
 
+        {/* OFFLINE / CACHE BANNER */}
+        {(syncState === "offline" || syncState === "cache") && (
+          <div className="cache-banner">
+            ⚠️ {syncState === "offline"
+              ? "ไม่สามารถเชื่อมต่อ Firebase ได้ — กำลังใช้ข้อมูลสำรองจาก localStorage (ข้อมูลยังปลอดภัย)"
+              : "กำลังใช้ข้อมูล cache — Firebase อาจช้าชั่วคราว"}
+          </div>
+        )}
+
+        {/* TABS */}
         <div className="tabs">
           {TABS.map(t => (
             <button key={t.id} className={`tab ${activeTab === t.id ? "active" : ""}`} onClick={() => setActiveTab(t.id)}>
@@ -1676,18 +2053,22 @@ useEffect(() => {
           ))}
         </div>
 
+        {/* CONTENT */}
         <div className="main">
           {loading ? (
             <div className="loading-wrap">
               <div className="loading-spinner" />
               <div className="loading-text">Syncing with Firebase...</div>
+              <div style={{ fontSize: 11, color: "var(--text3)", fontFamily: "var(--font-mono)", marginTop: -8 }}>
+                กำลังโหลดข้อมูล (หาก loading นาน จะใช้ข้อมูลสำรองอัตโนมัติใน 5 วินาที)
+              </div>
             </div>
           ) : (
             <>
               {activeTab === "dashboard"    && <DashboardTab    txs={txs} portfolio={portfolio} livePrices={livePrices} isLoadingPrices={isLoadingPrices} exchangeRate={exchangeRate} />}
               {activeTab === "transactions" && <TransactionsTab txs={txs} setTxs={handleSetTxs} />}
               {activeTab === "sms"          && <SmsParserTab    setTxs={handleSetTxs} portfolio={portfolio} setPortfolio={handleSetPortfolio} exchangeRate={exchangeRate} />}
-              {activeTab === "portfolio"    && <PortfolioTab    portfolio={portfolio} setPortfolio={handleSetPortfolio} livePrices={livePrices} isLoadingPrices={isLoadingPrices} exchangeRate={exchangeRate} setExchangeRate={handleSetExchangeRate} />}
+              {activeTab === "portfolio"    && <PortfolioTab    portfolio={portfolio} setPortfolio={handleSetPortfolio} livePrices={livePrices} isLoadingPrices={isLoadingPrices} exchangeRate={exchangeRate} setExchangeRate={handleSetExchangeRate} onExport={handleExport} onImport={handleImport} />}
               {activeTab === "budget"       && <BudgetTab       txs={txs} />}
             </>
           )}
@@ -1696,5 +2077,3 @@ useEffect(() => {
     </>
   );
 }
-
-
